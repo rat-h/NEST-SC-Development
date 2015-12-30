@@ -59,8 +59,9 @@ SeeAlso: synapsedict, hh_psc_alpha_gap
 */
 
 
-#ifndef GAP_JUNCTION_H
-#define GAP_JUNCTION_H
+#ifndef CONVOLUTION_H
+#define CONVOLUTION_H
+#define ConvolvEvent GapJunctionEvent
 
 #include "connection.h"
 

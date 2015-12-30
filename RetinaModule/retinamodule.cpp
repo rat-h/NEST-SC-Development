@@ -190,7 +190,7 @@ mynest::RetinaModule::init( SLIInterpreter* i )
      Give node type as template argument and the name as second argument.
      The first argument is always a reference to the network.
   */
-  nest::register_model< pif_psc_alpha >( nest::NestModule::get_network(), "pif_psc_alpha" );
+  nest::register_model< nest::stbrst_gc_conv >( nest::NestModule::get_network(), "stbrst_gc_conv" );
 
   /* Register a synapse type.
      Give synapse type as template argument and the name as second argument.
@@ -204,8 +204,12 @@ mynest::RetinaModule::init( SLIInterpreter* i )
      even further, but limits the number of available rports. Please see
      Kunkel et al, Front Neurofinfom 8:78 (2014), Sec 3.3.2, for details.
   */
-  nest::register_connection_model< DropOddSpikeConnection< nest::TargetIdentifierPtrRport > >(
-    nest::NestModule::get_network(), "drop_odd_synapse" );
+  nest::register_secondary_connection_model< nest::Convolv< nest::TargetIdentifierPtrRport > >(
+    nest::NestModule::get_network(), "Convolution", false );
+
+//  nest::register_connection_model< DropOddSpikeConnection< nest::TargetIdentifierPtrRport > >(
+//    nest::NestModule::get_network(), "drop_odd_synapse" );
+
 
   /* Register a SLI function.
      The first argument is the function name for SLI, the second a pointer to
@@ -213,6 +217,7 @@ mynest::RetinaModule::init( SLIInterpreter* i )
      you do not need to give the mangled name. If you give a mangled name, you
      should define a type trie in the retinamodule-init.sli file.
   */
-  i->createcommand( "StepPatternConnect_Vi_i_Vi_i_l", &stepPatternConnect_Vi_i_Vi_i_lFunction );
+  //We don't need SLI functions
+  //i->createcommand( "StepPatternConnect_Vi_i_Vi_i_l", &stepPatternConnect_Vi_i_Vi_i_lFunction );
 
 } // RetinaModule::init()

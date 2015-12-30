@@ -41,6 +41,7 @@
 #include <gsl/gsl_odeiv.h>
 #include <gsl/gsl_sf_exp.h>
 
+#include "convolution.h"
 namespace nest
 {
 
