@@ -73,7 +73,7 @@ namespace nest
  */
 
 template < typename targetidentifierT >
-class GapJunction : public Connection< targetidentifierT >
+class Convolv : public Connection< targetidentifierT >
 {
 
   double_t weight_;
@@ -82,14 +82,14 @@ public:
   // this line determines which common properties to use
   typedef CommonSynapseProperties CommonPropertiesType;
   typedef Connection< targetidentifierT > ConnectionBase;
-  typedef GapJunctionEvent EventType;
+  typedef ConvolvEvent EventType;
 
 
   /**
    * Default Constructor.
    * Sets default values for all parameters. Needed by GenericConnectorModel.
    */
-  GapJunction()
+  Convolv()
     : ConnectionBase()
     , weight_( 1.0 )
   {
@@ -145,7 +145,7 @@ public:
 
 template < typename targetidentifierT >
 void
-GapJunction< targetidentifierT >::get_status( DictionaryDatum& d ) const
+Convolv< targetidentifierT >::get_status( DictionaryDatum& d ) const
 {
   // We have to include the delay here to prevent
   // errors due to internal calls of
@@ -157,7 +157,7 @@ GapJunction< targetidentifierT >::get_status( DictionaryDatum& d ) const
 
 template < typename targetidentifierT >
 void
-GapJunction< targetidentifierT >::set_status( const DictionaryDatum& d, ConnectorModel& cm )
+Convolv< targetidentifierT >::set_status( const DictionaryDatum& d, ConnectorModel& cm )
 {
   // If the delay is set, we throw a BadProperty
   if ( d->known( names::delay ) )

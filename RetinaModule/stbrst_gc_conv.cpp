@@ -575,7 +575,7 @@ nest::stbrst_gc_conv::update_( Time const& origin,
   }
 
   // Send gap-event
-  GapJunctionEvent ge;
+  ConvolvEvent ge;
   ge.set_coeffarray( new_coefficients );
   network()->send_secondary( *this, ge );
 
@@ -619,7 +619,7 @@ nest::stbrst_gc_conv::handle( DataLoggingRequest& e )
 }
 
 void
-nest::stbrst_gc_conv::handle( GapJunctionEvent& e )
+nest::stbrst_gc_conv::handle( ConvolvEvent& e )
 {
 
   B_.sumj_g_ij_ += e.get_weight();

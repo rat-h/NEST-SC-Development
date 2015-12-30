@@ -37,8 +37,8 @@
 
 // include headers with your own stuff
 #include "retinamodule.h"
-#include "pif_psc_alpha.h"
-#include "drop_odd_spike_connection.h"
+#include "stbrst_gc_conv.h"
+#include "convolution.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
 
