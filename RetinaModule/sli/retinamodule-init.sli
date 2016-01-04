@@ -1,22 +1,29 @@
 /*
  *  retinamodule-init.sli
  *
- *  This file is part of NEST.
  *
- *  Copyright (C) 2004 The NEST Initiative
+ *  This file is part of a model to study development cortex's inputs 
+ *  alignment in SC.
+ * 
+ *  Retinal module provides Starburst Amacrine cell model and
+ *  Cholinergic connections modeled by convolution of voltage neighbor cells
  *
- *  NEST is free software: you can redistribute it and/or modify
+ *  Copyright (C) Ruben Tikidji-Hamburyan (rath@gwu.edu)
+ *
+ * * * * * * * * * * * *
+ * 
+ *  This module is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 2 of the License, or
  *  (at your option) any later version.
  *
- *  NEST is distributed in the hope that it will be useful,
+ *  This module is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this module.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,9 +32,12 @@
  * Run automatically when RetinaModule is loaded.
  */
 
-M_DEBUG (retinamodule.sli) (Initializing SLI support for RetinaModule.) message
+M_DEBUG (retinamodule.sli) (Initializing SLI support for Retina Module.) message
 
+// ==== We are going to use python functions to create network. Therefore we don't need SLI procs. (rth) ====
+/*
 /StepPatternConnect [ /arraytype /integertype /arraytype /integertype /literaltype ]
 {
   StepPatternConnect_Vi_i_Vi_i_l
 } def
+*/

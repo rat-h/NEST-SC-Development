@@ -1,22 +1,28 @@
 /*
  *  retinamodule.cpp
  *
- *  This file is part of NEST.
+ *  This file is part of a model to study development cortex's inputs 
+ *  alignment in SC.
+ * 
+ *  Retinal module provides Starburst Amacrine cell model and
+ *  Cholinergic connections modeled by convolution of voltage neighbor cells
  *
- *  Copyright (C) 2004 The NEST Initiative
+ *  Copyright (C) Ruben Tikidji-Hamburyan (rath@gwu.edu)
  *
- *  NEST is free software: you can redistribute it and/or modify
+ * * * * * * * * * * * *
+ * 
+ *  This module is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 2 of the License, or
  *  (at your option) any later version.
  *
- *  NEST is distributed in the hope that it will be useful,
+ *  This module is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this module.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -73,7 +79,7 @@ mynest::RetinaModule::~RetinaModule()
 const std::string
 mynest::RetinaModule::name( void ) const
 {
-  return std::string( "My NEST Module" ); // Return name of the module
+  return std::string( "Retinal Module" ); // Return name of the module
 }
 
 const std::string
@@ -83,141 +89,129 @@ mynest::RetinaModule::commandstring( void ) const
   return std::string( "(retinamodule-init) run" );
 }
 
-/* BeginDocumentation
-   Name: StepPatternConnect - Connect sources and targets with a stepping pattern
+// ==== We are going to use python functions to create network. Therefore we don't need SLI procs. (rth) ====
+///* BeginDocumentation
+   //Name: StepPatternConnect - Connect sources and targets with a stepping pattern
 
-   Synopsis:
-   [sources] source_step [targets] target_step synmod StepPatternConnect -> n_connections
+   //Synopsis:
+   //[sources] source_step [targets] target_step synmod StepPatternConnect -> n_connections
 
-   Parameters:
-   [sources]     - Array containing GIDs of potential source neurons
-   source_step   - Make connection from every source_step'th neuron
-   [targets]     - Array containing GIDs of potential target neurons
-   target_step   - Make connection to every target_step'th neuron
-   synmod        - The synapse model to use (literal, must be key in synapsedict)
-   n_connections - Number of connections made
+   //Parameters:
+   //[sources]     - Array containing GIDs of potential source neurons
+   //source_step   - Make connection from every source_step'th neuron
+   //[targets]     - Array containing GIDs of potential target neurons
+   //target_step   - Make connection to every target_step'th neuron
+   //synmod        - The synapse model to use (literal, must be key in synapsedict)
+   //n_connections - Number of connections made
 
-   Description:
-   This function subsamples the source and target arrays given with steps
-   source_step and target_step, beginning with the first element in each array,
-   and connects the selected nodes.
+   //Description:
+   //This function subsamples the source and target arrays given with steps
+   //source_step and target_step, beginning with the first element in each array,
+   //and connects the selected nodes.
 
-   Example:
-   /first_src 0 /network_size get def
-   /last_src /iaf_neuron 20 Create def  % nodes  1 .. 20
-   /src [first_src last_src] Range def
-   /last_tgt /iaf_neuron 10 Create def  % nodes 21 .. 30
-   /tgt [last_src 1 add last_tgt] Range def
+   //Example:
+   ///first_src 0 /network_size get def
+   ///last_src /iaf_neuron 20 Create def  % nodes  1 .. 20
+   ///src [first_src last_src] Range def
+   ///last_tgt /iaf_neuron 10 Create def  % nodes 21 .. 30
+   ///tgt [last_src 1 add last_tgt] Range def
 
-   src 6 tgt 4 /drop_odd_spike StepPatternConnect
+   //src 6 tgt 4 /drop_odd_spike StepPatternConnect
 
-   This connects nodes [1, 7, 13, 19] as sources to nodes [21, 25,
-   29] as targets using synapses of type drop_odd_spike, and
-   returning 12 as the number of connections.  The following
-   command will print the connections (you must paste the SLI
-   command as one long line):
+   //This connects nodes [1, 7, 13, 19] as sources to nodes [21, 25,
+   //29] as targets using synapses of type drop_odd_spike, and
+   //returning 12 as the number of connections.  The following
+   //command will print the connections (you must paste the SLI
+   //command as one long line):
 
-   src { /s Set << /source s >> GetConnections { cva 1 get } Map dup length 0 gt { cout s <- ( -> )
-   <- exch <-- endl } if ; } forall
-   1 -> [21 25 29]
-   7 -> [21 25 29]
-   13 -> [21 25 29]
-   19 -> [21 25 29]
+   //src { /s Set << /source s >> GetConnections { cva 1 get } Map dup length 0 gt { cout s <- ( -> )
+   //<- exch <-- endl } if ; } forall
+   //1 -> [21 25 29]
+   //7 -> [21 25 29]
+   //13 -> [21 25 29]
+   //19 -> [21 25 29]
 
-   Remark:
-   This function is only provided as an example for how to write your own
-   interface function.
+   //Remark:
+   //This function is only provided as an example for how to write your own
+   //interface function.
 
-   Author:
-   Hans Ekkehard Plesser
+   //Author:
+   //Hans Ekkehard Plesser
 
-   SeeAlso: Connect
-*/
-void
-mynest::RetinaModule::StepPatternConnect_Vi_i_Vi_i_lFunction::execute( SLIInterpreter* i ) const
-{
-  // Check if we have (at least) five arguments on the stack.
-  i->assert_stack_load( 5 );
+   //SeeAlso: Connect
+//*/
 
-  // Retrieve source, source step, target, target step from the stack
-  const TokenArray sources = getValue< TokenArray >( i->OStack.pick( 4 ) ); // bottom
-  const long src_step = getValue< long >( i->OStack.pick( 3 ) );
-  const TokenArray targets = getValue< TokenArray >( i->OStack.pick( 2 ) );
-  const long tgt_step = getValue< long >( i->OStack.pick( 1 ) );
-  const Name synmodel_name = getValue< std::string >( i->OStack.pick( 0 ) ); // top
+//void
+//mynest::RetinaModule::StepPatternConnect_Vi_i_Vi_i_lFunction::execute( SLIInterpreter* i ) const
+//{
+  //// Check if we have (at least) five arguments on the stack.
+  //i->assert_stack_load( 5 );
 
-  // Obtain synapse model index
-  const Token synmodel = nest::NestModule::get_network().get_synapsedict().lookup( synmodel_name );
-  if ( synmodel.empty() )
-    throw nest::UnknownSynapseType( synmodel_name.toString() );
-  const nest::index synmodel_id = static_cast< nest::index >( synmodel );
+  //// Retrieve source, source step, target, target step from the stack
+  //const TokenArray sources = getValue< TokenArray >( i->OStack.pick( 4 ) ); // bottom
+  //const long src_step = getValue< long >( i->OStack.pick( 3 ) );
+  //const TokenArray targets = getValue< TokenArray >( i->OStack.pick( 2 ) );
+  //const long tgt_step = getValue< long >( i->OStack.pick( 1 ) );
+  //const Name synmodel_name = getValue< std::string >( i->OStack.pick( 0 ) ); // top
 
-  // Build a list of targets with the given step
-  TokenArray selected_targets;
-  for ( size_t t = 0; t < targets.size(); t += tgt_step )
-    selected_targets.push_back( targets[ t ] );
+  //// Obtain synapse model index
+  //const Token synmodel = nest::NestModule::get_network().get_synapsedict().lookup( synmodel_name );
+  //if ( synmodel.empty() )
+    //throw nest::UnknownSynapseType( synmodel_name.toString() );
+  //const nest::index synmodel_id = static_cast< nest::index >( synmodel );
 
-  // Now connect all appropriate sources to this list of targets
-  size_t Nconn = 0; // counts connections
-  for ( size_t s = 0; s < sources.size(); s += src_step )
-  {
-    // We must first obtain the GID of the source as integer
-    const nest::long_t sgid = getValue< nest::long_t >( sources[ s ] );
+  //// Build a list of targets with the given step
+  //TokenArray selected_targets;
+  //for ( size_t t = 0; t < targets.size(); t += tgt_step )
+    //selected_targets.push_back( targets[ t ] );
 
-    // nest::network::divergent_connect() requires weight and delay arrays. We want to use
-    // default values from the synapse model, so we pass empty arrays.
-    nest::NestModule::get_network().divergent_connect(
-      sgid, selected_targets, TokenArray(), TokenArray(), synmodel_id );
-    Nconn += selected_targets.size();
-  }
+  //// Now connect all appropriate sources to this list of targets
+  //size_t Nconn = 0; // counts connections
+  //for ( size_t s = 0; s < sources.size(); s += src_step )
+  //{
+    //// We must first obtain the GID of the source as integer
+    //const nest::long_t sgid = getValue< nest::long_t >( sources[ s ] );
 
-  // We get here only if none of the operations above throws and exception.
-  // Now we can safely remove the arguments from the stack and push Nconn
-  // as our result.
-  i->OStack.pop( 5 );
-  i->OStack.push( Nconn );
+    //// nest::network::divergent_connect() requires weight and delay arrays. We want to use
+    //// default values from the synapse model, so we pass empty arrays.
+    //nest::NestModule::get_network().divergent_connect(
+      //sgid, selected_targets, TokenArray(), TokenArray(), synmodel_id );
+    //Nconn += selected_targets.size();
+  //}
 
-  // Finally, we pop the call to this functions from the execution stack.
-  i->EStack.pop();
-}
+  //// We get here only if none of the operations above throws and exception.
+  //// Now we can safely remove the arguments from the stack and push Nconn
+  //// as our result.
+  //i->OStack.pop( 5 );
+  //i->OStack.push( Nconn );
+
+  //// Finally, we pop the call to this functions from the execution stack.
+  //i->EStack.pop();
+//}
 
 //-------------------------------------------------------------------------------------
 
 void
 mynest::RetinaModule::init( SLIInterpreter* i )
 {
-  /* Register a neuron or device model.
-     Give node type as template argument and the name as second argument.
-     The first argument is always a reference to the network.
-  */
-  nest::register_model< nest::stbrst_gc_conv >( nest::NestModule::get_network(), "stbrst_gc_conv" );
+  /* === Register a Starburst Amacrine cell model. === */
+  nest::register_model< nest::stbrst_gc_conv >(
+    nest::NestModule::get_network(), "stbrst_gc_conv" );
 
-  /* Register a synapse type.
-     Give synapse type as template argument and the name as second argument.
-     The first argument is always a reference to the network.
-
-     There are two choices for the template argument:
-         - nest::TargetIdentifierPtrRport
-         - nest::TargetIdentifierIndex
-     The first is the standard and you should usually stick to it.
-     nest::TargetIdentifierIndex reduces the memory requirement of synapses
-     even further, but limits the number of available rports. Please see
-     Kunkel et al, Front Neurofinfom 8:78 (2014), Sec 3.3.2, for details.
-  */
+  /* === Register a Convolution type. ===
+   * I use Gap-Junction Module and GapJunctionEvent to convey voltage of 
+   * neighbor Amacrine cells
+   */
   nest::register_secondary_connection_model< nest::Convolv< nest::TargetIdentifierPtrRport > >(
     nest::NestModule::get_network(), "Convolution", false );
 
-//  nest::register_connection_model< DropOddSpikeConnection< nest::TargetIdentifierPtrRport > >(
-//    nest::NestModule::get_network(), "drop_odd_synapse" );
-
-
+// === It seems, we don't need SLI function. (rth) ===
   /* Register a SLI function.
      The first argument is the function name for SLI, the second a pointer to
      the function object. If you do not want to overload the function in SLI,
      you do not need to give the mangled name. If you give a mangled name, you
      should define a type trie in the retinamodule-init.sli file.
   */
-  //We don't need SLI functions
   //i->createcommand( "StepPatternConnect_Vi_i_Vi_i_l", &stepPatternConnect_Vi_i_Vi_i_lFunction );
 
 } // RetinaModule::init()

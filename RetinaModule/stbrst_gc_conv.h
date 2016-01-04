@@ -60,25 +60,18 @@ using std::vector;
 extern "C" int stbrst_gc_conv_dynamics( double, const double*, double*, void* );
 
 /* BeginDocumentation
-Name: stbrst_gc_conv - Hodgkin Huxley neuron model with gap-junction support.
+Name: stbrst_gc_conv - Starburst Amacrine cell model with convolution over 
+ voltage neighbor Amacrine cells.
 
 Description:
 
- stbrst_gc_conv is an implementation of a spiking neuron using the Hodkin-Huxley formalism.
- In contrast to hh_psc_alpha the implementation additionally supports gap junctions.
+ stbrst_gc_conv is an implementation of a Starburst Amacrine cell with 
+ extra of ganglion spiking neuron using the Hennig's model.
+ The implementation use secondary connection event (same as gap-junction)
+ to calculate vpltage convolution.
 
-
- (1) Post-syaptic currents
- Incoming spike events induce a post-synaptic change of current modelled
- by an alpha function. The alpha function is normalised such that an event of
- weight 1.0 results in a peak current of 1 pA.
-
- (2) Spike Detection
- Spike detection is done by a combined threshold-and-local-maximum search: if there
- is a local maximum above a certain threshold of the membrane potential, it is considered a spike.
-
- (3) Gap Junctions
- Gap Junctions are implemented by a gap current of the form g_ij( V_i - V_j).
+ This module is based on original code used for Henning et.al. JNeurosci. 2009
+ kindly provided by Prof. Henning.
 
 Parameters:
 

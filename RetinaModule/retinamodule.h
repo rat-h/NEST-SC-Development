@@ -1,22 +1,29 @@
 /*
  *  retinamodule.h
  *
- *  This file is part of NEST.
  *
- *  Copyright (C) 2004 The NEST Initiative
+ *  This file is part of a model to study development cortex's inputs 
+ *  alignment in SC.
+ * 
+ *  Retinal module provides Starburst Amacrine cell model and
+ *  Cholinergic connections modeled by convolution of voltage neighbor cells
  *
- *  NEST is free software: you can redistribute it and/or modify
+ *  Copyright (C) Ruben Tikidji-Hamburyan (rath@gwu.edu)
+ *
+ * * * * * * * * * * * *
+ * 
+ *  This module is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 2 of the License, or
  *  (at your option) any later version.
  *
- *  NEST is distributed in the hope that it will be useful,
+ *  This module is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this module.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -70,26 +77,29 @@ public:
   const std::string commandstring( void ) const;
 
 public:
-  // Classes implementing your functions -----------------------------
 
-  /**
-   * Implement a function for a step-pattern-based connection.
-   * @note What this function does is described in the SLI documentation
-   *       in the cpp file.
-   * @note The mangled name indicates this function expects the following
-   *       arguments on the stack (bottom first): vector of int, int,
-   *       vector of int, int.
-   * @note You must define a member object in your module class
-   *       of the function class. execute() is later invoked on this
-   *       member.
-   */
-  class StepPatternConnect_Vi_i_Vi_i_lFunction : public SLIFunction
-  {
-  public:
-    void execute( SLIInterpreter* ) const;
-  };
+// ==== We are going to use python functions to create network. Therefore we don't need SLI procs. (rth) ====
+  //// Classes implementing your functions -----------------------------
+  ///**
+   //* Implement a function for a step-pattern-based connection.
+   //* @note What this function does is described in the SLI documentation
+   //*       in the cpp file.
+   //* @note The mangled name indicates this function expects the following
+   //*       arguments on the stack (bottom first): vector of int, int,
+   //*       vector of int, int.
+   //* @note You must define a member object in your module class
+   //*       of the function class. execute() is later invoked on this
+   //*       member.
+   //*/
 
-  StepPatternConnect_Vi_i_Vi_i_lFunction stepPatternConnect_Vi_i_Vi_i_lFunction;
+  //class StepPatternConnect_Vi_i_Vi_i_lFunction : public SLIFunction
+  //{
+  //public:
+    //void execute( SLIInterpreter* ) const;
+  //};
+
+  //StepPatternConnect_Vi_i_Vi_i_lFunction stepPatternConnect_Vi_i_Vi_i_lFunction;
+
 };
 } // namespace mynest
 
