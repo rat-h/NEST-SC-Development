@@ -1,27 +1,33 @@
 /*
  *  stbrst_gc_conv.h
  *
- *  This file is part of NEST.
+ *  This file is part of a model to study development cortex's inputs 
+ *  alignment in SC.
+ * 
+ *  Retinal module provides Starburst Amacrine cell model and
+ *  Cholinergic connections modeled by convolution of voltage neighbor cells
  *
- *  Copyright (C) 2004 The NEST Initiative
+ *  Copyright (C) Ruben Tikidji-Hamburyan (rath@gwu.edu)
  *
- *  NEST is free software: you can redistribute it and/or modify
+ * * * * * * * * * * * *
+ * 
+ *  This module is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 2 of the License, or
  *  (at your option) any later version.
  *
- *  NEST is distributed in the hope that it will be useful,
+ *  This module is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this module.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
-#ifndef HH_PSC_ALPHA_GAP_H
-#define HH_PSC_ALPHA_GAP_H
+#ifndef STBRST_GC_CONV_H
+#define STBRST_GC_CONV_H
 
 #include "config.h"
 
@@ -44,7 +50,6 @@
 #include "convolution.h"
 namespace nest
 {
-
 using std::vector;
 
 /**
@@ -68,63 +73,110 @@ Description:
  stbrst_gc_conv is an implementation of a Starburst Amacrine cell with 
  extra of ganglion spiking neuron using the Hennig's model.
  The implementation use secondary connection event (same as gap-junction)
- to calculate vpltage convolution.
+ to calculate voltage convolution for Cholinergic connections.
 
  This module is based on original code used for Henning et.al. JNeurosci. 2009
  kindly provided by Prof. Henning.
 
 Parameters:
+ In Hemming's model all parameters and variables is in SI. 
+ We use scaled units for minimization of an rounding error:
+ #  Cm   *  Vm   /  t    =  I   =   g   *   Vm
+ # 1e-6F * 1e-3V / 1e-3s = 1e-6A = 1e-3S * 1e-3V
+ #   uF  *  mV   /  ms   =  uA   =  mS   *  mV
 
  The following parameters can be set in the status dictionary.
+ ========= STATE VARIABLES =========
+ Vm         double - Membrane potential in mV 
+ conCa      double - Cytosol Ca++ Concentration (unit ?)
+ fAHP       double - Fast After-Hyperpolarization
+ sAHP       double - Slow component of After-Hyperpolarization
+ spont      double - Spontaneous activity, dynamical variable in uA
+ synconv    double - Synaptic activity, dynamical variable in mS
+ =========   AUX VARIABLE  =========
+ VmThC		double - Thresholded Membrane positional for Convolution connections
+                   - VmThC is Vm - VThC if Vm > VThC and the zero otherwise
+ =========    PARAMETERS   =========
+ VThC		double - Threshold Voltage Cholinergic activation
+ 
+ El         double - Resting membrane potential in mV.
+ gl         double - Leak conductance in mS.
+ Cm         double - Capacity of the membrane in uF.
+ 
+ 
+ gnoise     double - Conductance of spontaneous event in mS
+ tnoise     double - Time constant of spontaneous integration in ms
+ rnoise     double - Rate of spontaneous events in ms-1
+ 
+ gsyn       double - Maximal conductance of synapses event in mS
+ tsyn       double - Time constant of synaptic integration in ms
+ 
+ eCa        double - Ca++ reversal potential in mV
+ eK         double - K reversal potential in mV
+ 
+ aFAHP      double - Fast AHP activation constant in (units ?).
+ bFAHP      double - Fast AHP inactivation rate in ms-1.
+ aSAHP      double - Slow AHP activation constant in (units ?).
+ bSAHP      double - Slow AHP inactivation rate in ms-1.
+ gAHP       double - Maximal conductance of cumulated AHP in mS
+ 
+ vHCa       double - Half activation of Calcium steady-state in mV 
+ vSCa       double - Slop of Calcium steady-state activation in mV-1
+ gCa        double - Maximal conductance of Ca++ channel in mS
+ gainCAcon  double - Gain of Cytosol Ca++ concentration in (unit ?)/uA
+ tCAcon     double - Decay time constant of Ca++ concentration in ms
+ 
+ totAHPinit double - * Initial condition for cumulative AHP (fAHP)
+                     * In original model fAHP initiates from uniform random
+                     *  distribution in range (0, 1). Set this parameter
+                     *  individually for each neuron.
+ 
+References: 
+ Hennig, MH, Adams, C., Willshaw, D. and Sernagor, E. (2009).
+ Early-stage retinal waves arise close to a critical state between
+ local and global functional network connectivity.
+ Journal of Neuroscience, 29: 1077-1086.
 
- V_m        double - Membrane potential in mV
- E_L        double - Resting membrane potential in mV.
- g_L        double - Leak conductance in nS.
- C_m        double - Capacity of the membrane in pF.
- tau_syn_ex double - Rise time of the excitatory synaptic alpha function in ms.
- tau_syn_in double - Rise time of the inhibitory synaptic alpha function in ms.
- E_Na       double - Sodium reversal potential in mV.
- g_Na       double - Sodium peak conductance in nS.
- E_K        double - Potassium reversal potential in mV.
- g_Kv1      double - Potassium peak conductance in nS.
- g_Kv3      double - Potassium peak conductance in nS.
- Act_m      double - Activation variable m
- Act_h      double - Activation variable h
- Inact_n    double - Inactivation variable n
- I_e        double - Constant external input current in pA.
-
-References:
-
- Spiking Neuron Models:
- Single Neurons, Populations, Plasticity
- Wulfram Gerstner, Werner Kistler,  Cambridge University Press
-
- Mancilla, J. G., Lewis, T. J., Pinto, D. J.,
- Rinzel, J., and Connors, B. W.,
- Synchronization of electrically coupled pairs
- of inhibitory interneurons in neocortex,
- J. Neurosci. 27, 2058-2073 (2007),
- doi: 10.1523/JNEUROSCI.2715-06.2007 (parameters taken from here)
-
- Hodgkin, A. L. and Huxley, A. F.,
- A Quantitative Description of Membrane Current
- and Its Application to Conduction and Excitation in Nerve,
- Journal of Physiology, 117, 500-544 (1952)
-
- Hahne, J., Helias, M., Kunkel, S., Igarashi, J.,
- Bolten, M., Frommer, A. and Diesmann, M.,
- A unified framework for spiking and gap-junction interactions
- in distributed neuronal network simulations,
- Front. Neuroinform. 9:22. (2015),
- doi: 10.3389/fninf.2015.00022
-
-Sends: SpikeEvent, ConvolvEvent
+Sends: ConvolvEvent
 
 Receives: SpikeEvent, ConvolvEvent, CurrentEvent, DataLoggingRequest
 
-Author: Jan Hahne, Moritz Helias, Susanne Kunkel
-SeeAlso: hh_psc_alpha, hh_cond_exp_traub, gap_junction
+Author: Ruben Tikidji-Hamburyan
 */
+
+namespace names{
+	//States
+	extern const Name Vm;
+	extern const Name conCa;
+	extern const Name fAHP;
+	extern const Name sAHP;
+	extern const Name spont;
+	extern const Name synconv;
+	//Aux Variable
+	extern const Name VmThC;
+	//Parameters
+	extern const Name El;
+	extern const Name gl;
+	extern const Name Cm;
+	extern const Name gnoise;
+	extern const Name tnoise;
+	extern const Name rnoise;
+	extern const Name gsyn;
+	extern const Name tsyn;
+	extern const Name eCa;
+	extern const Name eK;
+	extern const Name aFAHP;
+	extern const Name bFAHP;
+	extern const Name aSAHP;
+	extern const Name bSAHP;
+	extern const Name gAHP;
+	extern const Name vHCa;
+	extern const Name vSCa;
+	extern const Name gCa;
+	extern const Name gainCAcon;
+	extern const Name tCAcon;
+	extern const Name totAHPinit;
+}
 
 class stbrst_gc_conv : public Archiving_Node
 {
@@ -209,18 +261,28 @@ private:
   //! Independent parameters
   struct Parameters_
   {
-    double_t t_ref_;   //!< refractory time in ms
-    double_t g_Na;     //!< Sodium Conductance in nS
-    double_t g_Kv1;    //!< Potassium Conductance in nS
-    double_t g_Kv3;    //!< Potassium Conductance in nS
-    double_t g_L;      //!< Leak Conductance in nS
-    double_t C_m;      //!< Membrane Capacitance in pF
-    double_t E_Na;     //!< Sodium Reversal Potential in mV
-    double_t E_K;      //!< Potassium Reversal Potential in mV
-    double_t E_L;      //!< Leak reversal Potential (aka resting potential) in mV
-    double_t tau_synE; //!< Synaptic Time Constant Excitatory Synapse in ms
-    double_t tau_synI; //!< Synaptic Time Constant for Inhibitory Synapse in ms
-    double_t I_e;      //!< Constant Current in pA
+	//See documentation above :)
+    double_t El_ ;
+    double_t gl_ ;
+    double_t Cm_ ;
+    double_t gnoise_ ;
+    double_t tnoise_ ;
+    double_t rnoise_ ;
+    double_t gsyn_ ;
+    double_t tsyn_ ;
+    double_t eCa_ ;
+    double_t eK_ ;
+    double_t aFAHP_ ;
+    double_t bFAHP_ ;
+    double_t aSAHP_ ;
+    double_t bSAHP_ ;
+    double_t gAHP_ ;
+    double_t vHCa_ ;
+    double_t vSCa_ ;
+    double_t gCa_ ;
+	double_t gainCAcon_ ;
+	double_t tCAcon_ ;
+	double_t totAHPinit_;
 
     Parameters_(); //!< Sets default parameter values
 
@@ -247,15 +309,12 @@ public:
      */
     enum StateVecElems
     {
-      V_M = 0,
-      HH_M,   // 1
-      HH_H,   // 2
-      HH_N,   // 3
-      HH_P,   // 4
-      DI_EXC, // 5
-      I_EXC,  // 6
-      DI_INH, // 7
-      I_INH,  // 8
+      VM = 0,// 0
+      CON_CA, // 1
+      FAHP,   // 2
+      SAHP,   // 3
+	  SPONT,  // 4
+	  SYNCONV,// 5
       STATE_VEC_SIZE
     };
 

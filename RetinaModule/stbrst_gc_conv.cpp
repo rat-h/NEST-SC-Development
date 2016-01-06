@@ -39,11 +39,42 @@
 #include <iostream>
 #include <cstdio>
 #include <cmath> // in case we need isnan() // fabs
+#include <nest_names.h>
 
 nest::RecordablesMap< nest::stbrst_gc_conv > nest::stbrst_gc_conv::recordablesMap_;
-
 namespace nest
 {
+namespace names{
+	const Name Vm( "Vm" );
+	const Name conCa( "conCa" );
+	const Name fAHP( "fAHP" );
+	const Name sAHP( "sAHP" );
+	const Name spont( "spont" );
+	const Name synconv( "synconv" );
+	const Name VmThC( "VmThC" );
+	const Name El( "El" );
+	const Name gl( "gl" );
+	const Name Cm( "Cm" );
+	const Name gnoise( "gnoise" );
+	const Name tnoise( "tnoise" );
+	const Name rnoise( "rnoise" );
+	const Name gsyn( "gsyn" );
+	const Name tsyn( "tsyn" );
+	const Name eCa( "eCa" );
+	const Name eK( "eK" );
+	const Name aFAHP( "aFAHP" );
+	const Name bFAHP( "bFAHP" );
+	const Name aSAHP( "aSAHP" );
+	const Name bSAHP( "bSAHP" );
+	const Name gAHP( "gAHP" );
+	const Name vHCa( "vHCa" );
+	const Name vSCa( "vSCa" );
+	const Name gCa( "gCa" );
+	const Name gainCAcon( "gainCAcon" );
+	const Name tCAcon( "tCAcon" );
+	const Name totAHPinit( "totAHPinit" );
+}
+
 // Override the create() method with one call to RecordablesMap::insert_()
 // for each quantity to be recorded.
 template <>
@@ -51,13 +82,12 @@ void
 RecordablesMap< stbrst_gc_conv >::create()
 {
   // use standard names whereever you can for consistency!
-  insert_( names::V_m, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::V_M > );
-  insert_( names::I_ex, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::I_EXC > );
-  insert_( names::I_in, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::I_INH > );
-  insert_( names::Act_m, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::HH_M > );
-  insert_( names::Act_h, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::HH_H > );
-  insert_( names::Inact_n, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::HH_N > );
-  insert_( names::Inact_p, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::HH_P > );
+  insert_( names::Vm, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::VM > );
+  insert_( names::conCa, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::CON_CA > );
+  insert_( names::fAHP, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::FAHP > );
+  insert_( names::sAHP, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SAHP > );
+  insert_( names::spont, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SPONT > );
+  insert_( names::synconv, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SYNCONV > );
 }
 
 extern "C" int
@@ -77,16 +107,13 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
   // good compiler will optimize the verbosity away ...
 
   // shorthand for state variables
-  const double_t& V = y[ S::V_M ];
-  const double_t& m = y[ S::HH_M ];
-  const double_t& h = y[ S::HH_H ];
-  const double_t& n = y[ S::HH_N ];
-  const double_t& p = y[ S::HH_P ];
-  const double_t& dI_ex = y[ S::DI_EXC ];
-  const double_t& I_ex = y[ S::I_EXC ];
-  const double_t& dI_in = y[ S::DI_INH ];
-  const double_t& I_in = y[ S::I_INH ];
-
+  const double_t& V       = y[ S::VM ];
+  const double_t& conCa   = y[ S::CON_CA ];
+  const double_t& fAHP    = y[ S::FAHP ];
+  const double_t& sAHP    = y[ S::SAHP ];
+  const double_t& spont   = y[ S::SPONT ];
+  const double_t& synconv = y[ S::SYNCONV ];
+/*
   const double_t alpha_m = 40. * ( V - 75.5 ) / ( 1. - std::exp( -( V - 75.5 ) / 13.5 ) );
   const double_t beta_m = 1.2262 / std::exp( V / 42.248 );
   const double_t alpha_h = 0.0035 / std::exp( V / 24.186 );
@@ -144,7 +171,7 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
   f[ S::I_EXC ] = dI_ex - ( I_ex / node.P_.tau_synE );
   f[ S::DI_INH ] = -dI_in / node.P_.tau_synI;
   f[ S::I_INH ] = dI_in - ( I_in / node.P_.tau_synI );
-
+*/
   return GSL_SUCCESS;
 }
 }
@@ -154,48 +181,39 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
  * ---------------------------------------------------------------- */
 
 nest::stbrst_gc_conv::Parameters_::Parameters_()
-  : t_ref_( 2.0 )   // ms
-  , g_Na( 4500. )   // nS
-  , g_Kv1( 9.0 )    // nS
-  , g_Kv3( 9000.0 ) // nS
-  , g_L( 10.0 )     // nS
-  , C_m( 40.0 )     // pF
-  , E_Na( 74.0 )    // mV
-  , E_K( -90.0 )    // mV
-  , E_L( -70. )     // mV
-  , tau_synE( 0.2 ) // ms
-  , tau_synI( 2.0 ) // ms
-  , I_e( 0.0 )      // pA
+    : El_( -65. ) // in mV
+    , gl_( 1e3/180000000 ) // in mS
+    , Cm_( 1.6E-4 ) // in uF
+    , gnoise_( 2E-7 ) // in mS
+    , tnoise_( 80. ) // in ms
+    , rnoise_( 1.4 ) // in ms-1
+    , gsyn_( 3.2e-4 ) // in mS
+    , tsyn_( 200. ) // in ms
+    , eCa_( 50. ) // in mV
+    , eK_( -90. ) // in mV
+    , aFAHP_( 2400. ) // in ?
+    , bFAHP_( 200. ) // in mc
+    , aSAHP_( 30. ) // in ?
+    , bSAHP_( 20. ) // in mc
+    , gAHP_( 3e-5 ) // in mS // -(minus) !!!!
+    , vHCa_( -20. ) // in mV
+    , vSCa_( 1. ) // in mV-1
+    , gCa_( 1e-5 ) // in mS // -!
+	, gainCAcon_ ( 1e2 ) // in ? / uA
+	, tCAcon_ ( 50. ) // in ms
+	, totAHPinit_ (0.5) // in ?
 {
 }
 
-nest::stbrst_gc_conv::State_::State_( const Parameters_& )
+nest::stbrst_gc_conv::State_::State_( const Parameters_& p)
   : r_( 0 )
 {
-  y_[ 0 ] = -69.60401191631222; // p.E_L;
-  //'Inact_n': 0.0005741576228359798, 'Inact_p': 0.00025113182271506364
-  //'Act_h': 0.8684620412943986,
+  const double_t vinit = (y_[ 0 ] = p.El_);
 
   for ( size_t i = 1; i < STATE_VEC_SIZE; ++i )
     y_[ i ] = 0;
 
-  // equilibrium values for (in)activation variables
-  const double_t alpha_m =
-    40. * ( y_[ 0 ] - 75.5 ) / ( 1. - std::exp( -( y_[ 0 ] - 75.5 ) / 13.5 ) );
-  const double_t beta_m = 1.2262 / std::exp( y_[ 0 ] / 42.248 );
-  const double_t alpha_h = 0.0035 / std::exp( y_[ 0 ] / 24.186 );
-  const double_t beta_h =
-    0.017 * ( 51.25 + y_[ 0 ] ) / ( 1. - std::exp( -( 51.25 + y_[ 0 ] ) / 5.2 ) );
-  const double_t alpha_p = ( y_[ 0 ] - 95. ) / ( 1. - std::exp( -( y_[ 0 ] - 95. ) / 11.8 ) );
-  const double_t beta_p = 0.025 / std::exp( y_[ 0 ] / 22.222 );
-  const double_t alpha_n =
-    0.014 * ( y_[ 0 ] + 44. ) / ( 1. - std::exp( -( y_[ 0 ] + 44. ) / 2.3 ) );
-  const double_t beta_n = 0.0043 / std::exp( ( y_[ 0 ] + 44. ) / 34. );
-
-  y_[ HH_H ] = alpha_h / ( alpha_h + beta_h );
-  y_[ HH_N ] = alpha_n / ( alpha_n + beta_n );
-  y_[ HH_M ] = alpha_m / ( alpha_m + beta_m );
-  y_[ HH_P ] = alpha_p / ( alpha_p + beta_p );
+  y_[ FAHP ] = p.totAHPinit_;
 }
 
 nest::stbrst_gc_conv::State_::State_( const State_& s )
@@ -222,42 +240,57 @@ nest::stbrst_gc_conv::State_& nest::stbrst_gc_conv::State_::operator=( const Sta
 void
 nest::stbrst_gc_conv::Parameters_::get( DictionaryDatum& d ) const
 {
-  def< double >( d, names::t_ref, t_ref_ );
-  def< double >( d, names::g_Na, g_Na );
-  def< double >( d, names::g_Kv1, g_Kv1 );
-  def< double >( d, names::g_Kv3, g_Kv3 );
-  def< double >( d, names::g_L, g_L );
-  def< double >( d, names::E_Na, E_Na );
-  def< double >( d, names::E_K, E_K );
-  def< double >( d, names::E_L, E_L );
-  def< double >( d, names::C_m, C_m );
-  def< double >( d, names::tau_syn_ex, tau_synE );
-  def< double >( d, names::tau_syn_in, tau_synI );
-  def< double >( d, names::I_e, I_e );
+	def< double >( d, names::El, El_ );
+	def< double >( d, names::gl, gl_ );
+	def< double >( d, names::Cm, Cm_ );
+	def< double >( d, names::gnoise, gnoise_ );
+	def< double >( d, names::tnoise, tnoise_ );
+	def< double >( d, names::rnoise, rnoise_ );
+	def< double >( d, names::gsyn, gsyn_ );
+	def< double >( d, names::tsyn, tsyn_ );
+	def< double >( d, names::eCa, eCa_ );
+	def< double >( d, names::eK, eK_ );
+	def< double >( d, names::aFAHP, aFAHP_ );
+	def< double >( d, names::bFAHP, bFAHP_ );
+	def< double >( d, names::aSAHP, aSAHP_ );
+	def< double >( d, names::bSAHP, bSAHP_ );
+	def< double >( d, names::gAHP, gAHP_ );
+	def< double >( d, names::vHCa, vHCa_ );
+	def< double >( d, names::vSCa, vSCa_ );
+	def< double >( d, names::gCa, gCa_ );
+	def< double >( d, names::gainCAcon, gainCAcon_ );
+	def< double >( d, names::tCAcon, tCAcon_ );
+	def< double >( d, names::totAHPinit, totAHPinit_ );
 }
 
 void
 nest::stbrst_gc_conv::Parameters_::set( const DictionaryDatum& d )
 {
-  updateValue< double >( d, names::t_ref, t_ref_ );
-  updateValue< double >( d, names::C_m, C_m );
-  updateValue< double >( d, names::g_Na, g_Na );
-  updateValue< double >( d, names::E_Na, E_Na );
-  updateValue< double >( d, names::g_Kv1, g_Kv1 );
-  updateValue< double >( d, names::g_Kv3, g_Kv3 );
-  updateValue< double >( d, names::E_K, E_K );
-  updateValue< double >( d, names::g_L, g_L );
-  updateValue< double >( d, names::E_L, E_L );
-
-  updateValue< double >( d, names::tau_syn_ex, tau_synE );
-  updateValue< double >( d, names::tau_syn_in, tau_synI );
-
-  updateValue< double >( d, names::I_e, I_e );
-
-  if ( C_m <= 0 )
-    throw BadProperty( "Capacitance must be strictly positive." );
-
-  if ( t_ref_ < 0 )
+	 updateValue< double >( d, names::El, El_ );
+	 updateValue< double >( d, names::gl, gl_ );
+	 updateValue< double >( d, names::Cm, Cm_ );
+	 updateValue< double >( d, names::gnoise, gnoise_ );
+	 updateValue< double >( d, names::tnoise, tnoise_ );
+	 updateValue< double >( d, names::rnoise, rnoise_ );
+	 updateValue< double >( d, names::gsyn, gsyn_ );
+	 updateValue< double >( d, names::tsyn, tsyn_ );
+	 updateValue< double >( d, names::eCa, eCa_ );
+	 updateValue< double >( d, names::eK, eK_ );
+	 updateValue< double >( d, names::aFAHP, aFAHP_ );
+	 updateValue< double >( d, names::bFAHP, bFAHP_ );
+	 updateValue< double >( d, names::aSAHP, aSAHP_ );
+	 updateValue< double >( d, names::bSAHP, bSAHP_ );
+	 updateValue< double >( d, names::gAHP, gAHP_ );
+	 updateValue< double >( d, names::vHCa, vHCa_ );
+	 updateValue< double >( d, names::vSCa, vSCa_ );
+	 updateValue< double >( d, names::gCa, gCa_ );
+	 updateValue< double >( d, names::gainCAcon, gainCAcon_ );
+	 updateValue< double >( d, names::tCAcon, tCAcon_ );
+	 updateValue< double >( d, names::totAHPinit, totAHPinit_ );
+	if ( Cm_ <= 0 )
+		throw BadProperty( "Capacitance must be strictly positive." );
+////// TODO >> Check parameters range (rth)
+/*  if ( t_ref_ < 0 )
     throw BadProperty( "Refractory time cannot be negative." );
 
   if ( tau_synE <= 0 || tau_synI <= 0 )
@@ -265,29 +298,33 @@ nest::stbrst_gc_conv::Parameters_::set( const DictionaryDatum& d )
 
   if ( g_Kv1 < 0 || g_Kv3 < 0 || g_Na < 0 || g_L < 0 )
     throw BadProperty( "All conductances must be non-negative." );
+*/
 }
 
 void
 nest::stbrst_gc_conv::State_::get( DictionaryDatum& d ) const
 {
-  def< double >( d, names::V_m, y_[ V_M ] );
-  def< double >( d, names::Act_m, y_[ HH_M ] );
-  def< double >( d, names::Act_h, y_[ HH_H ] );
-  def< double >( d, names::Inact_n, y_[ HH_N ] );
-  def< double >( d, names::Inact_p, y_[ HH_P ] );
+	def< double >( d, names::Vm, y_[ VM ] );
+	def< double >( d, names::conCa, y_[ CON_CA ] );
+	def< double >( d, names::fAHP, y_[ FAHP ] );
+	def< double >( d, names::sAHP, y_[ SAHP ] );
+	def< double >( d, names::spont, y_[ SPONT ] );
+	def< double >( d, names::synconv, y_[ SYNCONV ] );
 }
 
 void
 nest::stbrst_gc_conv::State_::set( const DictionaryDatum& d )
 {
-  updateValue< double >( d, names::V_m, y_[ V_M ] );
-  updateValue< double >( d, names::Act_m, y_[ HH_M ] );
-  updateValue< double >( d, names::Act_h, y_[ HH_H ] );
-  updateValue< double >( d, names::Inact_n, y_[ HH_N ] );
-  updateValue< double >( d, names::Inact_p, y_[ HH_P ] );
-
-  if ( y_[ HH_M ] < 0 || y_[ HH_H ] < 0 || y_[ HH_N ] < 0 || y_[ HH_P ] < 0 )
-    throw BadProperty( "All (in)activation variables must be non-negative." );
+	updateValue< double >( d, names::Vm, y_[ VM ] );
+	updateValue< double >( d, names::conCa, y_[ CON_CA ] );
+	updateValue< double >( d, names::fAHP, y_[ FAHP ] );
+	updateValue< double >( d, names::sAHP, y_[ SAHP ] );
+	updateValue< double >( d, names::spont, y_[ SPONT ] );
+	updateValue< double >( d, names::synconv, y_[ SYNCONV ] );
+////// TODO >> Check parameters range (rth)
+/*	if ( y_[ HH_M ] < 0 || y_[ HH_H ] < 0 || y_[ HH_N ] < 0 || y_[ HH_P ] < 0 )
+		throw BadProperty( "All (in)activation variables must be non-negative." );
+*/
 }
 
 nest::stbrst_gc_conv::Buffers_::Buffers_( stbrst_gc_conv& n )
