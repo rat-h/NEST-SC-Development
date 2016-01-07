@@ -44,6 +44,7 @@
 nest::RecordablesMap< nest::stbrst_gc_conv > nest::stbrst_gc_conv::recordablesMap_;
 namespace nest
 {
+//Names exported to the NEST
 namespace names{
 	const Name Vm( "Vm" );
 	const Name conCa( "conCa" );
@@ -99,7 +100,10 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
   // get access to node so we can almost work as in a member function
   assert( pnode );
   const nest::stbrst_gc_conv& node = *( reinterpret_cast< nest::stbrst_gc_conv* >( pnode ) );
-
+  
+  //parameters shorthand
+  const nest::stbrst_gc_conv::Parameters_ P = node.P_;
+  
   // y[] here is---and must be---the state vector supplied by the integrator,
   // not the state vector in the node, node.S_.y[].
 
@@ -113,19 +117,22 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
   const double_t& sAHP    = y[ S::SAHP ];
   const double_t& spont   = y[ S::SPONT ];
   const double_t& synconv = y[ S::SYNCONV ];
+  
+  const double_t ca_act   = (0.5 * (1. + std::tanh((V - P.vHCa_) / (2. * P.vSCa_))));
+  const double_t ICa      = ca_act * P.gCa_ * (P.eCa_ - V);
+  const double_t dc       = fAHP*fAHP*fAHP*fAHP;
+  const double_t IsAHP    = P.gAHP_ * dc * (P.eK_ - V);
+  const double_t conCa4   = conCa * conCa * conCa * conCa;
+  f[   S::VM  ] =
+      (IsAHP + ICa + spont - synconv * V + P.gl_ * (P.El_ - V) ) / P.Cm_;
+  f[ S::SPONT ] = - spont / P.tnoise_;
+  f[ S::FAHP  ] = P.aFAHP_ * conCa + sAHP * (1. - fAHP) - fAHP * P.bFAHP_;
+  f[ S::SAHP  ] = P.aSAHP_ * conCa4/(2e-10 + conCa4) * (1. - sAHP) - sAHP * P.bSAHP_;
+
+
+
 /*
-  const double_t alpha_m = 40. * ( V - 75.5 ) / ( 1. - std::exp( -( V - 75.5 ) / 13.5 ) );
-  const double_t beta_m = 1.2262 / std::exp( V / 42.248 );
-  const double_t alpha_h = 0.0035 / std::exp( V / 24.186 );
-  const double_t beta_h = 0.017 * ( 51.25 + V ) / ( 1. - std::exp( -( 51.25 + V ) / 5.2 ) );
-  const double_t alpha_p = ( V - 95. ) / ( 1. - std::exp( -( V - 95. ) / 11.8 ) );
-  const double_t beta_p = 0.025 / std::exp( V / 22.222 );
-  const double_t alpha_n = 0.014 * ( V + 44. ) / ( 1. - std::exp( -( V + 44. ) / 2.3 ) );
-  const double_t beta_n = 0.0043 / std::exp( ( V + 44. ) / 34. );
-  const double_t I_Na = node.P_.g_Na * m * m * m * h * ( V - node.P_.E_Na );
-  const double_t I_K =
-    ( node.P_.g_Kv1 * n * n * n * n + node.P_.g_Kv3 * p * p ) * ( V - node.P_.E_K );
-  const double_t I_L = node.P_.g_L * ( V - node.P_.E_L );
+
 
   // set I_gap depending on interpolation order
   double_t gap = 0.0;
@@ -157,7 +164,7 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
   const double_t I_gap = gap;
 
   // V dot -- synaptic input are currents, inhib current is negative
-  f[ S::V_M ] =
+  f[ S::VM ] =
     ( -( I_Na + I_K + I_L ) + node.B_.I_stim_ + node.P_.I_e + I_ex + I_in + I_gap ) / node.P_.C_m;
 
   // channel dynamics
@@ -186,7 +193,6 @@ nest::stbrst_gc_conv::Parameters_::Parameters_()
     , Cm_( 1.6E-4 ) // in uF
     , gnoise_( 2E-7 ) // in mS
     , tnoise_( 80. ) // in ms
-    , rnoise_( 1.4 ) // in ms-1
     , gsyn_( 3.2e-4 ) // in mS
     , tsyn_( 200. ) // in ms
     , eCa_( 50. ) // in mV
@@ -245,7 +251,6 @@ nest::stbrst_gc_conv::Parameters_::get( DictionaryDatum& d ) const
 	def< double >( d, names::Cm, Cm_ );
 	def< double >( d, names::gnoise, gnoise_ );
 	def< double >( d, names::tnoise, tnoise_ );
-	def< double >( d, names::rnoise, rnoise_ );
 	def< double >( d, names::gsyn, gsyn_ );
 	def< double >( d, names::tsyn, tsyn_ );
 	def< double >( d, names::eCa, eCa_ );
@@ -271,7 +276,6 @@ nest::stbrst_gc_conv::Parameters_::set( const DictionaryDatum& d )
 	 updateValue< double >( d, names::Cm, Cm_ );
 	 updateValue< double >( d, names::gnoise, gnoise_ );
 	 updateValue< double >( d, names::tnoise, tnoise_ );
-	 updateValue< double >( d, names::rnoise, rnoise_ );
 	 updateValue< double >( d, names::gsyn, gsyn_ );
 	 updateValue< double >( d, names::tsyn, tsyn_ );
 	 updateValue< double >( d, names::eCa, eCa_ );
@@ -449,13 +453,13 @@ nest::stbrst_gc_conv::init_buffers_()
 void
 nest::stbrst_gc_conv::calibrate()
 {
-  B_.logger_.init(); // ensures initialization in case mm connected after Simulate
+/*  B_.logger_.init(); // ensures initialization in case mm connected after Simulate
 
   V_.PSCurrInit_E_ = 1.0 * numerics::e / P_.tau_synE;
   V_.PSCurrInit_I_ = 1.0 * numerics::e / P_.tau_synI;
   V_.RefractoryCounts_ = Time( Time::ms( P_.t_ref_ ) ).get_steps();
   assert( V_.RefractoryCounts_ >= 0 ); // since t_ref_ >= 0, this can only fail in error
-}
+*/}
 
 /* ----------------------------------------------------------------
  * Update and spike handling functions
@@ -491,18 +495,17 @@ nest::stbrst_gc_conv::update_( Time const& origin,
     // determine the current section
     B_.lag_ = lag;
 
-    if ( prelim )
-    {
-      y_i = S_.y_[ State_::V_M ];
+    if ( prelim ){ //Preliminary update
+      y_i = S_.y_[ State_::VM ];
       if ( interpolation_order == 3 )
       {
         stbrst_gc_conv_dynamics( 0, S_.y_, f_temp, reinterpret_cast< void* >( this ) );
-        hf_i = B_.step_ * f_temp[ State_::V_M ];
+        hf_i = B_.step_ * f_temp[ State_::VM ];
       }
     }
 
     double_t t = 0.0;
-    const double_t U_old = S_.y_[ State_::V_M ];
+    const double_t U_old = S_.y_[ State_::VM ];
 
     // numerical integration with adaptive step size control:
     // ------------------------------------------------------
@@ -531,17 +534,16 @@ nest::stbrst_gc_conv::update_( Time const& origin,
         throw GSLSolverFailure( get_name(), status );
     }
 
-    if ( !prelim )
-    {
-      S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value( lag ) * V_.PSCurrInit_E_;
-      S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value( lag ) * V_.PSCurrInit_I_;
+    if ( !prelim ){ // main update
+      //S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value( lag ) * V_.PSCurrInit_E_;
+      //S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value( lag ) * V_.PSCurrInit_I_;
       // sending spikes: crossing 0 mV, pseudo-refractoriness and local maximum...
       // refractory?
       if ( S_.r_ > 0 )
         --S_.r_;
       else
         // (    threshold    &&     maximum       )
-        if ( S_.y_[ State_::V_M ] >= 0 && U_old > S_.y_[ State_::V_M ] )
+        if ( S_.y_[ State_::VM ] >= 0 && U_old > S_.y_[ State_::VM ] )
       {
         S_.r_ = V_.RefractoryCounts_;
 
@@ -559,11 +561,11 @@ nest::stbrst_gc_conv::update_( Time const& origin,
     }
     else // if(prelim)
     {
-      S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value_prelim( lag ) * V_.PSCurrInit_E_;
-      S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value_prelim( lag ) * V_.PSCurrInit_I_;
+      //S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value_prelim( lag ) * V_.PSCurrInit_E_;
+      //S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value_prelim( lag ) * V_.PSCurrInit_I_;
       // check deviation from last iteration
-      done = ( fabs( S_.y_[ State_::V_M ] - B_.last_y_values[ lag ] ) <= prelim_tol ) && done;
-      B_.last_y_values[ lag ] = S_.y_[ State_::V_M ];
+      done = ( fabs( S_.y_[ State_::VM ] - B_.last_y_values[ lag ] ) <= prelim_tol ) && done;
+      B_.last_y_values[ lag ] = S_.y_[ State_::VM ];
 
       // update different interpolations
 
@@ -576,15 +578,15 @@ nest::stbrst_gc_conv::update_( Time const& origin,
         break;
 
       case 1:
-        y_ip1 = S_.y_[ State_::V_M ];
+        y_ip1 = S_.y_[ State_::VM ];
 
         new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = y_ip1 - y_i;
         break;
 
       case 3:
-        y_ip1 = S_.y_[ State_::V_M ];
+        y_ip1 = S_.y_[ State_::VM ];
         stbrst_gc_conv_dynamics( B_.step_, S_.y_, f_temp, reinterpret_cast< void* >( this ) );
-        hf_ip1 = B_.step_ * f_temp[ State_::V_M ];
+        hf_ip1 = B_.step_ * f_temp[ State_::VM ];
 
         new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = hf_i;
         new_coefficients[ lag * ( interpolation_order + 1 ) + 2 ] =
@@ -602,10 +604,10 @@ nest::stbrst_gc_conv::update_( Time const& origin,
   } // end for-loop
 
   // if !prelim perform constant extrapolation and reset last_y_values
-  if ( !prelim )
+  if ( !prelim ) //main update
   {
     for ( long_t temp = from; temp < to; ++temp )
-      new_coefficients[ temp * ( interpolation_order + 1 ) + 0 ] = S_.y_[ State_::V_M ];
+      new_coefficients[ temp * ( interpolation_order + 1 ) + 0 ] = S_.y_[ State_::VM ];
 
     B_.last_y_values.clear();
     B_.last_y_values.resize( Scheduler::get_min_delay(), 0.0 );
@@ -666,8 +668,7 @@ nest::stbrst_gc_conv::handle( ConvolvEvent& e )
   // The call to get_coeffvalue( it ) in this loop also advances the iterator it
   while ( it != e.end() )
   {
-    B_.interpolation_coefficients[ i ] += e.get_weight() * e.get_coeffvalue( it );
-    i++;
+    B_.interpolation_coefficients[ i++ ] += e.get_weight() * e.get_coeffvalue( it );
   }
 }
 

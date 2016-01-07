@@ -79,9 +79,9 @@ Description:
  kindly provided by Prof. Henning.
 
 Parameters:
- In Hemming's model all parameters and variables is in SI. 
+ In Hemming's model all parameters and variables are in SI. 
  We use scaled units for minimization of an rounding error:
- #  Cm   *  Vm   /  t    =  I   =   g   *   Vm
+ #  Cm   *  Vm   /  t    =  I    =  g    *  Vm
  # 1e-6F * 1e-3V / 1e-3s = 1e-6A = 1e-3S * 1e-3V
  #   uF  *  mV   /  ms   =  uA   =  mS   *  mV
 
@@ -106,7 +106,6 @@ Parameters:
  
  gnoise     double - Conductance of spontaneous event in mS
  tnoise     double - Time constant of spontaneous integration in ms
- rnoise     double - Rate of spontaneous events in ms-1
  
  gsyn       double - Maximal conductance of synapses event in mS
  tsyn       double - Time constant of synaptic integration in ms
@@ -160,7 +159,6 @@ namespace names{
 	extern const Name Cm;
 	extern const Name gnoise;
 	extern const Name tnoise;
-	extern const Name rnoise;
 	extern const Name gsyn;
 	extern const Name tsyn;
 	extern const Name eCa;
@@ -267,7 +265,6 @@ private:
     double_t Cm_ ;
     double_t gnoise_ ;
     double_t tnoise_ ;
-    double_t rnoise_ ;
     double_t gsyn_ ;
     double_t tsyn_ ;
     double_t eCa_ ;
