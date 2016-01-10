@@ -143,38 +143,6 @@ Receives: SpikeEvent, ConvolvEvent, CurrentEvent, DataLoggingRequest
 Author: Ruben Tikidji-Hamburyan
 */
 
-namespace names{
-	//States
-	extern const Name Vm;
-	extern const Name conCa;
-	extern const Name fAHP;
-	extern const Name sAHP;
-	extern const Name spont;
-	extern const Name synconv;
-	//Aux Variable
-	extern const Name VmThC;
-	//Parameters
-	extern const Name El;
-	extern const Name gl;
-	extern const Name Cm;
-	extern const Name gnoise;
-	extern const Name tnoise;
-	extern const Name gsyn;
-	extern const Name tsyn;
-	extern const Name eCa;
-	extern const Name eK;
-	extern const Name aFAHP;
-	extern const Name bFAHP;
-	extern const Name aSAHP;
-	extern const Name bSAHP;
-	extern const Name gAHP;
-	extern const Name vHCa;
-	extern const Name vSCa;
-	extern const Name gCa;
-	extern const Name gainCAcon;
-	extern const Name tCAcon;
-	extern const Name totAHPinit;
-}
 
 class stbrst_gc_conv : public Archiving_Node
 {
@@ -200,16 +168,22 @@ public:
   void handle( CurrentEvent& );
   void handle( DataLoggingRequest& );
   void handle( ConvolvEvent& );
+  inline void event_hook( DSConvolvEvent& e )
+  {
+	  stbrst_gc_conv& rec = (stbrst_gc_conv&)e.get_receiver();
+      rec.handle( e );
+  }
+
 
   port handles_test_event( SpikeEvent&, rport );
   port handles_test_event( CurrentEvent&, rport );
   port handles_test_event( DataLoggingRequest&, rport );
   port handles_test_event( ConvolvEvent&, rport );
 
-  void
-  sends_secondary_event( ConvolvEvent& )
-  {
-  }
+  //void
+  //sends_secondary_event( ConvolvEvent& )
+  //{
+  //}
 
   /**
    * Return membrane potential at time t.
@@ -238,9 +212,7 @@ private:
   void init_state_( const Node& proto );
   void init_buffers_();
   void calibrate();
-  bool update_( Time const&, const long_t, const long_t, const bool );
   void update( Time const&, const long_t, const long_t );
-  bool prelim_update( Time const&, const long_t, const long_t );
 
   // END Boilerplate function declarations ----------------------------
 
@@ -415,22 +387,22 @@ private:
   static RecordablesMap< stbrst_gc_conv > recordablesMap_;
 };
 
-inline void
-stbrst_gc_conv::update( Time const& origin, const long_t from, const long_t to )
-{
-  update_( origin, from, to, false );
-}
+//inline void
+//stbrst_gc_conv::update( Time const& origin, const long_t from, const long_t to )
+//{
+  //update_( origin, from, to, false );
+//}
 
-inline bool
-stbrst_gc_conv::prelim_update( Time const& origin, const long_t from, const long_t to )
-{
-  bool done = false;
-  State_ old_state = S_; // save state before prelim update
-  done = update_( origin, from, to, true );
-  S_ = old_state; // restore old state
+//inline bool
+//stbrst_gc_conv::prelim_update( Time const& origin, const long_t from, const long_t to )
+//{
+  //bool done = false;
+  //State_ old_state = S_; // save state before prelim update
+  //done = update_( origin, from, to, true );
+  //S_ = old_state; // restore old state
 
-  return done;
-}
+  //return done;
+//}
 
 inline port
 stbrst_gc_conv::send_test_event( Node& target, rport receptor_type, synindex, bool )

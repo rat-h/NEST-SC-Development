@@ -40,40 +40,22 @@
 #include <cstdio>
 #include <cmath> // in case we need isnan() // fabs
 #include <nest_names.h>
+#include "convolution.h"
 
 nest::RecordablesMap< nest::stbrst_gc_conv > nest::stbrst_gc_conv::recordablesMap_;
 namespace nest
 {
 //Names exported to the NEST
-namespace names{
-	const Name Vm( "Vm" );
-	const Name conCa( "conCa" );
-	const Name fAHP( "fAHP" );
-	const Name sAHP( "sAHP" );
-	const Name spont( "spont" );
-	const Name synconv( "synconv" );
-	const Name VmThC( "VmThC" );
-	const Name El( "El" );
-	const Name gl( "gl" );
-	const Name Cm( "Cm" );
-	const Name gnoise( "gnoise" );
-	const Name tnoise( "tnoise" );
-	const Name rnoise( "rnoise" );
-	const Name gsyn( "gsyn" );
-	const Name tsyn( "tsyn" );
-	const Name eCa( "eCa" );
-	const Name eK( "eK" );
-	const Name aFAHP( "aFAHP" );
-	const Name bFAHP( "bFAHP" );
-	const Name aSAHP( "aSAHP" );
-	const Name bSAHP( "bSAHP" );
-	const Name gAHP( "gAHP" );
-	const Name vHCa( "vHCa" );
-	const Name vSCa( "vSCa" );
-	const Name gCa( "gCa" );
-	const Name gainCAcon( "gainCAcon" );
-	const Name tCAcon( "tCAcon" );
-	const Name totAHPinit( "totAHPinit" );
+
+void ConvolvEvent::operator()()
+{
+  ((stbrst_gc_conv*) receiver_)->handle( *this );
+}
+
+
+void DSConvolvEvent::operator()()
+{
+ ((stbrst_gc_conv*)sender_)->event_hook( *this );
 }
 
 // Override the create() method with one call to RecordablesMap::insert_()
@@ -83,12 +65,12 @@ void
 RecordablesMap< stbrst_gc_conv >::create()
 {
   // use standard names whereever you can for consistency!
-  insert_( names::Vm, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::VM > );
-  insert_( names::conCa, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::CON_CA > );
-  insert_( names::fAHP, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::FAHP > );
-  insert_( names::sAHP, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SAHP > );
-  insert_( names::spont, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SPONT > );
-  insert_( names::synconv, &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SYNCONV > );
+  insert_( "Vm", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::VM > );
+  insert_( "conCa", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::CON_CA > );
+  insert_( "fAHP", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::FAHP > );
+  insert_( "sAHP", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SAHP > );
+  insert_( "spont", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SPONT > );
+  insert_( "synconv", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SYNCONV > );
 }
 
 extern "C" int
@@ -246,51 +228,51 @@ nest::stbrst_gc_conv::State_& nest::stbrst_gc_conv::State_::operator=( const Sta
 void
 nest::stbrst_gc_conv::Parameters_::get( DictionaryDatum& d ) const
 {
-	def< double >( d, names::El, El_ );
-	def< double >( d, names::gl, gl_ );
-	def< double >( d, names::Cm, Cm_ );
-	def< double >( d, names::gnoise, gnoise_ );
-	def< double >( d, names::tnoise, tnoise_ );
-	def< double >( d, names::gsyn, gsyn_ );
-	def< double >( d, names::tsyn, tsyn_ );
-	def< double >( d, names::eCa, eCa_ );
-	def< double >( d, names::eK, eK_ );
-	def< double >( d, names::aFAHP, aFAHP_ );
-	def< double >( d, names::bFAHP, bFAHP_ );
-	def< double >( d, names::aSAHP, aSAHP_ );
-	def< double >( d, names::bSAHP, bSAHP_ );
-	def< double >( d, names::gAHP, gAHP_ );
-	def< double >( d, names::vHCa, vHCa_ );
-	def< double >( d, names::vSCa, vSCa_ );
-	def< double >( d, names::gCa, gCa_ );
-	def< double >( d, names::gainCAcon, gainCAcon_ );
-	def< double >( d, names::tCAcon, tCAcon_ );
-	def< double >( d, names::totAHPinit, totAHPinit_ );
+	def< double >( d, "El", El_ );
+	def< double >( d, "gl", gl_ );
+	def< double >( d, "Cm", Cm_ );
+	def< double >( d, "gnoise", gnoise_ );
+	def< double >( d, "tnoise", tnoise_ );
+	def< double >( d, "gsyn", gsyn_ );
+	def< double >( d, "tsyn", tsyn_ );
+	def< double >( d, "eCa", eCa_ );
+	def< double >( d, "eK", eK_ );
+	def< double >( d, "aFAHP", aFAHP_ );
+	def< double >( d, "bFAHP", bFAHP_ );
+	def< double >( d, "aSAHP", aSAHP_ );
+	def< double >( d, "bSAHP", bSAHP_ );
+	def< double >( d, "gAHP", gAHP_ );
+	def< double >( d, "vHCa", vHCa_ );
+	def< double >( d, "vSCa", vSCa_ );
+	def< double >( d, "gCa", gCa_ );
+	def< double >( d, "gainCAcon", gainCAcon_ );
+	def< double >( d, "tCAcon", tCAcon_ );
+	def< double >( d, "totAHPinit", totAHPinit_ );
 }
 
 void
 nest::stbrst_gc_conv::Parameters_::set( const DictionaryDatum& d )
 {
-	 updateValue< double >( d, names::El, El_ );
-	 updateValue< double >( d, names::gl, gl_ );
-	 updateValue< double >( d, names::Cm, Cm_ );
-	 updateValue< double >( d, names::gnoise, gnoise_ );
-	 updateValue< double >( d, names::tnoise, tnoise_ );
-	 updateValue< double >( d, names::gsyn, gsyn_ );
-	 updateValue< double >( d, names::tsyn, tsyn_ );
-	 updateValue< double >( d, names::eCa, eCa_ );
-	 updateValue< double >( d, names::eK, eK_ );
-	 updateValue< double >( d, names::aFAHP, aFAHP_ );
-	 updateValue< double >( d, names::bFAHP, bFAHP_ );
-	 updateValue< double >( d, names::aSAHP, aSAHP_ );
-	 updateValue< double >( d, names::bSAHP, bSAHP_ );
-	 updateValue< double >( d, names::gAHP, gAHP_ );
-	 updateValue< double >( d, names::vHCa, vHCa_ );
-	 updateValue< double >( d, names::vSCa, vSCa_ );
-	 updateValue< double >( d, names::gCa, gCa_ );
-	 updateValue< double >( d, names::gainCAcon, gainCAcon_ );
-	 updateValue< double >( d, names::tCAcon, tCAcon_ );
-	 updateValue< double >( d, names::totAHPinit, totAHPinit_ );
+	 updateValue< double >( d, "El", El_ );
+	 updateValue< double >( d, "gl", gl_ );
+	 updateValue< double >( d, "Cm", Cm_ );
+	 updateValue< double >( d, "gnoise", gnoise_ );
+	 updateValue< double >( d, "tnoise", tnoise_ );
+	 updateValue< double >( d, "gsyn", gsyn_ );
+	 updateValue< double >( d, "tsyn", tsyn_ );
+	 updateValue< double >( d, "eCa", eCa_ );
+	 updateValue< double >( d, "eK", eK_ );
+	 updateValue< double >( d, "aFAHP", aFAHP_ );
+	 updateValue< double >( d, "bFAHP", bFAHP_ );
+	 updateValue< double >( d, "aSAHP", aSAHP_ );
+	 updateValue< double >( d, "bSAHP", bSAHP_ );
+	 updateValue< double >( d, "gAHP", gAHP_ );
+	 updateValue< double >( d, "vHCa", vHCa_ );
+	 updateValue< double >( d, "vSCa", vSCa_ );
+	 updateValue< double >( d, "gCa", gCa_ );
+	 updateValue< double >( d, "gainCAcon", gainCAcon_ );
+	 updateValue< double >( d, "tCAcon", tCAcon_ );
+	 updateValue< double >( d, "totAHPinit", totAHPinit_ );
 	if ( Cm_ <= 0 )
 		throw BadProperty( "Capacitance must be strictly positive." );
 ////// TODO >> Check parameters range (rth)
@@ -308,23 +290,23 @@ nest::stbrst_gc_conv::Parameters_::set( const DictionaryDatum& d )
 void
 nest::stbrst_gc_conv::State_::get( DictionaryDatum& d ) const
 {
-	def< double >( d, names::Vm, y_[ VM ] );
-	def< double >( d, names::conCa, y_[ CON_CA ] );
-	def< double >( d, names::fAHP, y_[ FAHP ] );
-	def< double >( d, names::sAHP, y_[ SAHP ] );
-	def< double >( d, names::spont, y_[ SPONT ] );
-	def< double >( d, names::synconv, y_[ SYNCONV ] );
+	def< double >( d, "Vm", y_[ VM ] );
+	def< double >( d, "conCa", y_[ CON_CA ] );
+	def< double >( d, "fAHP", y_[ FAHP ] );
+	def< double >( d, "sAHP", y_[ SAHP ] );
+	def< double >( d, "spont", y_[ SPONT ] );
+	def< double >( d, "synconv", y_[ SYNCONV ] );
 }
 
 void
 nest::stbrst_gc_conv::State_::set( const DictionaryDatum& d )
 {
-	updateValue< double >( d, names::Vm, y_[ VM ] );
-	updateValue< double >( d, names::conCa, y_[ CON_CA ] );
-	updateValue< double >( d, names::fAHP, y_[ FAHP ] );
-	updateValue< double >( d, names::sAHP, y_[ SAHP ] );
-	updateValue< double >( d, names::spont, y_[ SPONT ] );
-	updateValue< double >( d, names::synconv, y_[ SYNCONV ] );
+	updateValue< double >( d, "Vm", y_[ VM ] );
+	updateValue< double >( d, "conCa", y_[ CON_CA ] );
+	updateValue< double >( d, "fAHP", y_[ FAHP ] );
+	updateValue< double >( d, "sAHP", y_[ SAHP ] );
+	updateValue< double >( d, "spont", y_[ SPONT ] );
+	updateValue< double >( d, "synconv", y_[ SYNCONV ] );
 ////// TODO >> Check parameters range (rth)
 /*	if ( y_[ HH_M ] < 0 || y_[ HH_H ] < 0 || y_[ HH_N ] < 0 || y_[ HH_P ] < 0 )
 		throw BadProperty( "All (in)activation variables must be non-negative." );
@@ -465,165 +447,156 @@ nest::stbrst_gc_conv::calibrate()
  * Update and spike handling functions
  * ---------------------------------------------------------------- */
 
-bool
-nest::stbrst_gc_conv::update_( Time const& origin,
+void
+nest::stbrst_gc_conv::update( Time const& origin,
   const long_t from,
-  const long_t to,
-  const bool prelim )
+  const long_t to )
 {
 
   assert( to >= 0 && ( delay ) from < Scheduler::get_min_delay() );
   assert( from < to );
 
   bool done = true;
-  const size_t interpolation_order = Scheduler::get_prelim_interpolation_order();
-  const double_t prelim_tol = Scheduler::get_prelim_tol();
+ //// const size_t interpolation_order = Scheduler::get_prelim_interpolation_order();
+  ////const double_t prelim_tol = Scheduler::get_prelim_tol();
 
-  // allocate memory to store the new interpolation coefficients
-  // to be sent by gap event
-  const size_t quantity = Scheduler::get_min_delay() * ( interpolation_order + 1 );
-  std::vector< double_t > new_coefficients( quantity, 0.0 );
+  //// allocate memory to store the new interpolation coefficients
+  //// to be sent by gap event
+  //const size_t quantity = Scheduler::get_min_delay() * ( interpolation_order + 1 );
+  //std::vector< double_t > new_coefficients( quantity, 0.0 );
 
-  // parameters needed for piecewise interpolation
-  double_t y_i = 0.0, y_ip1 = 0.0, hf_i = 0.0, hf_ip1 = 0.0;
-  double_t f_temp[ State_::STATE_VEC_SIZE ];
+  //// parameters needed for piecewise interpolation
+  //double_t y_i = 0.0, y_ip1 = 0.0, hf_i = 0.0, hf_ip1 = 0.0;
+  //double_t f_temp[ State_::STATE_VEC_SIZE ];
 
-  for ( long_t lag = from; lag < to; ++lag )
-  {
+  //for ( long_t lag = from; lag < to; ++lag )
+  //{
 
-    // B_.lag is needed by stbrst_gc_conv_dynamics to
-    // determine the current section
-    B_.lag_ = lag;
-
-    if ( prelim ){ //Preliminary update
-      y_i = S_.y_[ State_::VM ];
-      if ( interpolation_order == 3 )
-      {
-        stbrst_gc_conv_dynamics( 0, S_.y_, f_temp, reinterpret_cast< void* >( this ) );
-        hf_i = B_.step_ * f_temp[ State_::VM ];
-      }
-    }
-
-    double_t t = 0.0;
-    const double_t U_old = S_.y_[ State_::VM ];
-
-    // numerical integration with adaptive step size control:
-    // ------------------------------------------------------
-    // gsl_odeiv_evolve_apply performs only a single numerical
-    // integration step, starting from t and bounded by step;
-    // the while-loop ensures integration over the whole simulation
-    // step (0, step] if more than one integration step is needed due
-    // to a small integration step size;
-    // note that (t+IntegrationStep > step) leads to integration over
-    // (t, step] and afterwards setting t to step, but it does not
-    // enforce setting IntegrationStep to step-t; this is of advantage
-    // for a consistent and efficient integration across subsequent
-    // simulation intervals
-    while ( t < B_.step_ )
-    {
-      const int status = gsl_odeiv_evolve_apply( B_.e_,
-        B_.c_,
-        B_.s_,
-        &B_.sys_,             // system of ODE
-        &t,                   // from t
-        B_.step_,             // to t <= step
-        &B_.IntegrationStep_, // integration step size
-        S_.y_ );              // neuronal state
-
-      if ( status != GSL_SUCCESS )
-        throw GSLSolverFailure( get_name(), status );
-    }
-
-    if ( !prelim ){ // main update
-      //S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value( lag ) * V_.PSCurrInit_E_;
-      //S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value( lag ) * V_.PSCurrInit_I_;
-      // sending spikes: crossing 0 mV, pseudo-refractoriness and local maximum...
-      // refractory?
-      if ( S_.r_ > 0 )
-        --S_.r_;
-      else
-        // (    threshold    &&     maximum       )
-        if ( S_.y_[ State_::VM ] >= 0 && U_old > S_.y_[ State_::VM ] )
-      {
-        S_.r_ = V_.RefractoryCounts_;
-
-        set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
-
-        SpikeEvent se;
-        network()->send( *this, se, lag );
-      }
-
-      // log state data
-      B_.logger_.record_data( origin.get_steps() + lag );
-
-      // set new input current
-      B_.I_stim_ = B_.currents_.get_value( lag );
-    }
-    else // if(prelim)
-    {
-      //S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value_prelim( lag ) * V_.PSCurrInit_E_;
-      //S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value_prelim( lag ) * V_.PSCurrInit_I_;
-      // check deviation from last iteration
-      done = ( fabs( S_.y_[ State_::VM ] - B_.last_y_values[ lag ] ) <= prelim_tol ) && done;
-      B_.last_y_values[ lag ] = S_.y_[ State_::VM ];
-
-      // update different interpolations
-
-      // constant term is the same for each interpolation order
-      new_coefficients[ lag * ( interpolation_order + 1 ) + 0 ] = y_i;
-
-      switch ( interpolation_order )
-      {
-      case 0:
-        break;
-
-      case 1:
-        y_ip1 = S_.y_[ State_::VM ];
-
-        new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = y_ip1 - y_i;
-        break;
-
-      case 3:
-        y_ip1 = S_.y_[ State_::VM ];
-        stbrst_gc_conv_dynamics( B_.step_, S_.y_, f_temp, reinterpret_cast< void* >( this ) );
-        hf_ip1 = B_.step_ * f_temp[ State_::VM ];
-
-        new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = hf_i;
-        new_coefficients[ lag * ( interpolation_order + 1 ) + 2 ] =
-          -3 * y_i + 3 * y_ip1 - 2 * hf_i - hf_ip1;
-        new_coefficients[ lag * ( interpolation_order + 1 ) + 3 ] =
-          2 * y_i - 2 * y_ip1 + hf_i + hf_ip1;
-        break;
-
-      default:
-        throw BadProperty( "Interpolation order must be 0, 1, or 3." );
-      }
-    }
+    //// B_.lag is needed by stbrst_gc_conv_dynamics to
+    //// determine the current section
+    //B_.lag_ = lag;
 
 
-  } // end for-loop
+    //double_t t = 0.0;
+    //const double_t U_old = S_.y_[ State_::VM ];
 
-  // if !prelim perform constant extrapolation and reset last_y_values
-  if ( !prelim ) //main update
-  {
-    for ( long_t temp = from; temp < to; ++temp )
-      new_coefficients[ temp * ( interpolation_order + 1 ) + 0 ] = S_.y_[ State_::VM ];
+    //// numerical integration with adaptive step size control:
+    //// ------------------------------------------------------
+    //// gsl_odeiv_evolve_apply performs only a single numerical
+    //// integration step, starting from t and bounded by step;
+    //// the while-loop ensures integration over the whole simulation
+    //// step (0, step] if more than one integration step is needed due
+    //// to a small integration step size;
+    //// note that (t+IntegrationStep > step) leads to integration over
+    //// (t, step] and afterwards setting t to step, but it does not
+    //// enforce setting IntegrationStep to step-t; this is of advantage
+    //// for a consistent and efficient integration across subsequent
+    //// simulation intervals
+    //while ( t < B_.step_ )
+    //{
+      //const int status = gsl_odeiv_evolve_apply( B_.e_,
+        //B_.c_,
+        //B_.s_,
+        //&B_.sys_,             // system of ODE
+        //&t,                   // from t
+        //B_.step_,             // to t <= step
+        //&B_.IntegrationStep_, // integration step size
+        //S_.y_ );              // neuronal state
 
-    B_.last_y_values.clear();
-    B_.last_y_values.resize( Scheduler::get_min_delay(), 0.0 );
-  }
+      //if ( status != GSL_SUCCESS )
+        //throw GSLSolverFailure( get_name(), status );
+    //}
 
-  // Send gap-event
-  ConvolvEvent ge;
-  ge.set_coeffarray( new_coefficients );
-  network()->send_secondary( *this, ge );
+    //if ( !prelim ){ // main update
+      ////S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value( lag ) * V_.PSCurrInit_E_;
+      ////S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value( lag ) * V_.PSCurrInit_I_;
+      //// sending spikes: crossing 0 mV, pseudo-refractoriness and local maximum...
+      //// refractory?
+      //if ( S_.r_ > 0 )
+        //--S_.r_;
+      //else
+        //// (    threshold    &&     maximum       )
+        //if ( S_.y_[ State_::VM ] >= 0 && U_old > S_.y_[ State_::VM ] )
+      //{
+        //S_.r_ = V_.RefractoryCounts_;
 
-  // Reset variables
-  B_.sumj_g_ij_ = 0.0;
-  B_.interpolation_coefficients.clear();
-  B_.interpolation_coefficients.resize( quantity, 0.0 );
+        //set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
 
-  return done;
+        //SpikeEvent se;
+        //network()->send( *this, se, lag );
+      //}
+
+      //// log state data
+      //B_.logger_.record_data( origin.get_steps() + lag );
+
+      //// set new input current
+      //B_.I_stim_ = B_.currents_.get_value( lag );
+    //}
+    //else // if(prelim)
+    //{
+      ////S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value_prelim( lag ) * V_.PSCurrInit_E_;
+      ////S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value_prelim( lag ) * V_.PSCurrInit_I_;
+      //// check deviation from last iteration
+      //done = ( fabs( S_.y_[ State_::VM ] - B_.last_y_values[ lag ] ) <= prelim_tol ) && done;
+      //B_.last_y_values[ lag ] = S_.y_[ State_::VM ];
+
+      //// update different interpolations
+
+      //// constant term is the same for each interpolation order
+      //new_coefficients[ lag * ( interpolation_order + 1 ) + 0 ] = y_i;
+
+      //switch ( interpolation_order )
+      //{
+      //case 0:
+        //break;
+
+      //case 1:
+        //y_ip1 = S_.y_[ State_::VM ];
+
+        //new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = y_ip1 - y_i;
+        //break;
+
+      //case 3:
+        //y_ip1 = S_.y_[ State_::VM ];
+        //stbrst_gc_conv_dynamics( B_.step_, S_.y_, f_temp, reinterpret_cast< void* >( this ) );
+        //hf_ip1 = B_.step_ * f_temp[ State_::VM ];
+
+        //new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = hf_i;
+        //new_coefficients[ lag * ( interpolation_order + 1 ) + 2 ] =
+          //-3 * y_i + 3 * y_ip1 - 2 * hf_i - hf_ip1;
+        //new_coefficients[ lag * ( interpolation_order + 1 ) + 3 ] =
+          //2 * y_i - 2 * y_ip1 + hf_i + hf_ip1;
+        //break;
+
+      //default:
+        //throw BadProperty( "Interpolation order must be 0, 1, or 3." );
+      //}
+    //}
+
+
+  //} // end for-loop
+
+  //// if !prelim perform constant extrapolation and reset last_y_values
+  //if ( !prelim ) //main update
+  //{
+    //for ( long_t temp = from; temp < to; ++temp )
+      //new_coefficients[ temp * ( interpolation_order + 1 ) + 0 ] = S_.y_[ State_::VM ];
+
+    //B_.last_y_values.clear();
+    //B_.last_y_values.resize( Scheduler::get_min_delay(), 0.0 );
+  //}
+
+  //// Send gap-event
+  ////ConvolvEvent ge;
+  ////ge.set_coeffarray( new_coefficients );
+  ////network()->send_secondary( *this, ge );
+
+  //// Reset variables
+  //B_.sumj_g_ij_ = 0.0;
+  //B_.interpolation_coefficients.clear();
+  //B_.interpolation_coefficients.resize( quantity, 0.0 );
+
+  return;
 }
 
 void
@@ -660,7 +633,7 @@ nest::stbrst_gc_conv::handle( DataLoggingRequest& e )
 void
 nest::stbrst_gc_conv::handle( ConvolvEvent& e )
 {
-
+/*
   B_.sumj_g_ij_ += e.get_weight();
 
   size_t i = 0;
@@ -670,6 +643,7 @@ nest::stbrst_gc_conv::handle( ConvolvEvent& e )
   {
     B_.interpolation_coefficients[ i++ ] += e.get_weight() * e.get_coeffvalue( it );
   }
+*/
 }
 
 #endif // HAVE_GSL
