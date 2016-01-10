@@ -1,22 +1,28 @@
 /*
- *  gap_junction.h
+ *  convolution.h
  *
- *  This file is part of NEST.
+  *  This file is part of a model to study development cortex's inputs 
+ *  alignment in SC.
+ * 
+ *  Retinal module provides Starburst Amacrine cell model and
+ *  Cholinergic connections modeled by convolution of voltage neighbor cells
  *
- *  Copyright (C) 2004 The NEST Initiative
+ *  Copyright (C) Ruben Tikidji-Hamburyan (rath@gwu.edu)
  *
- *  NEST is free software: you can redistribute it and/or modify
+ * * * * * * * * * * * *
+ * 
+ *  This module is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 2 of the License, or
  *  (at your option) any later version.
  *
- *  NEST is distributed in the hope that it will be useful,
+ *  This module is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this module.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -61,20 +67,62 @@ SeeAlso: synapsedict, hh_psc_alpha_gap
 
 #ifndef CONVOLUTION_H
 #define CONVOLUTION_H
-#define ConvolvEvent GapJunctionEvent
 
 #include "connection.h"
 
 namespace nest
 {
+class DSConvolvEvent;
+/**
+ * ConvolvEvent is used for send voltage over 
+ * Retinal to make a convolution.
+ */
+class ConvolvEvent : public Event
+{
+  double_t v_;
+
+public:
+  void operator()();
+  ConvolvEvent* clone() const;
+  void event_hook( DSConvolvEvent& );
+
+  void set_voltage( double_t );
+  double_t get_voltage() const;
+};
+
+inline ConvolvEvent*
+ConvolvEvent::clone() const
+{
+  return new ConvolvEvent( *this );
+}
+
+inline void
+ConvolvEvent::set_voltage( double_t v )
+{
+  v_ = v;
+}
+
+inline double_t
+ConvolvEvent::get_voltage() const
+{
+  return v_;
+}
 
 /**
- * Class representing a gap-junction connection. A gap-junction connection
- * has the properties weight, delay and receiver port.
+ * 'Callback request event'
  */
+class DSConvolvEvent : public ConvolvEvent
+{
+public:
+  void operator()();
+};
 
+
+
+//template < typename targetidentifierT >
+//class Convolv : public Connection< targetidentifierT >
 template < typename targetidentifierT >
-class Convolv : public Connection< targetidentifierT >
+class Convolv : public nest::Connection< targetidentifierT >
 {
 
   double_t weight_;
@@ -83,7 +131,7 @@ public:
   // this line determines which common properties to use
   typedef CommonSynapseProperties CommonPropertiesType;
   typedef Connection< targetidentifierT > ConnectionBase;
-  typedef ConvolvEvent EventType;
+  //typedef ConvolvEvent EventType;
 
 
   /**
@@ -104,17 +152,29 @@ public:
   using ConnectionBase::get_delay_steps;
   using ConnectionBase::get_rport;
   using ConnectionBase::get_target;
+  class ConnTestDummyNode : public nest::ConnTestDummyNodeBase
+  {
+  public:
+    using nest::ConnTestDummyNodeBase::handles_test_event;
+    nest::port
+    handles_test_event( nest::ConvolvEvent&, nest::rport )
+    {
+      return nest::invalid_port_;
+    }
+
+    nest::port
+    handles_test_event( nest::DSConvolvEvent&, nest::rport )
+    {
+      return nest::invalid_port_;
+    }
+  };
 
 
   void
   check_connection( Node& s, Node& t, rport receptor_type, double_t, const CommonPropertiesType& )
   {
-    EventType ge;
-
-    s.sends_secondary_event( ge );
-    ge.set_sender( s );
-    Connection< targetidentifierT >::target_.set_rport( t.handles_test_event( ge, receptor_type ) );
-    Connection< targetidentifierT >::target_.set_target( &t );
+    ConnTestDummyNode dummy_target;
+    ConnectionBase::check_connection_( dummy_target, s, t, receptor_type );
   }
 
   /**
@@ -127,9 +187,9 @@ public:
   send( Event& e, thread t, double_t, const CommonSynapseProperties& )
   {
     e.set_weight( weight_ );
-    e.set_delay( get_delay_steps() );
-    e.set_receiver( *get_target( t ) );
-    e.set_rport( get_rport() );
+    e.set_delay( ConnectionBase::get_delay_steps() );
+    e.set_receiver( *ConnectionBase::get_target( t ) );
+    e.set_rport( ConnectionBase::get_rport() );
     e();
   }
 
@@ -148,9 +208,6 @@ template < typename targetidentifierT >
 void
 Convolv< targetidentifierT >::get_status( DictionaryDatum& d ) const
 {
-  // We have to include the delay here to prevent
-  // errors due to internal calls of
-  // this function in SLI/pyNEST
   ConnectionBase::get_status( d );
   def< double_t >( d, names::weight, weight_ );
   def< long_t >( d, names::size_of, sizeof( *this ) );
@@ -160,10 +217,6 @@ template < typename targetidentifierT >
 void
 Convolv< targetidentifierT >::set_status( const DictionaryDatum& d, ConnectorModel& cm )
 {
-  // If the delay is set, we throw a BadProperty
-  if ( d->known( names::delay ) )
-    throw BadProperty( "gap_junction connection has no delay" );
-
   ConnectionBase::set_status( d, cm );
   updateValue< double_t >( d, names::weight, weight_ );
 }
