@@ -105,76 +105,33 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
   const double_t dc       = fAHP*fAHP*fAHP*fAHP;
   const double_t IsAHP    = P.gAHP_ * dc * (P.eK_ - V);
   const double_t conCa4   = conCa * conCa * conCa * conCa;
-  f[   S::VM  ] =
+  f[S::VM     ] = 
       (IsAHP + ICa + spont - synconv * V + P.gl_ * (P.El_ - V) ) / P.Cm_;
-  f[ S::SPONT ] = - spont / P.tnoise_;
-  f[ S::FAHP  ] = P.aFAHP_ * conCa + sAHP * (1. - fAHP) - fAHP * P.bFAHP_;
-  f[ S::SAHP  ] = P.aSAHP_ * conCa4/(2e-10 + conCa4) * (1. - sAHP) - sAHP * P.bSAHP_;
+  f[S::CON_CA ] = P.gainCAcon_* ICa - conCa / P.tCAcon_;
+  f[S::SPONT  ] = - spont / P.tnoise_;
+  f[S::FAHP   ] = (P.aFAHP_ * conCa + sAHP) * (1. - fAHP) - fAHP * P.bFAHP_;
+  f[S::SAHP   ] = P.aSAHP_ * conCa4/(2e-10 + conCa4) * (1. - sAHP) - sAHP * P.bSAHP_;
+  f[S::SYNCONV] = - synconv / P.tsyn_;
 
 
-
-/*
-
-
-  // set I_gap depending on interpolation order
-  double_t gap = 0.0;
-
-  const double_t t = time / node.B_.step_;
-
-  switch ( Scheduler::get_prelim_interpolation_order() )
-  {
-  case 0:
-    gap = -node.B_.sumj_g_ij_ * V + node.B_.interpolation_coefficients[ node.B_.lag_ ];
-    break;
-
-  case 1:
-    gap = -node.B_.sumj_g_ij_ * V + node.B_.interpolation_coefficients[ node.B_.lag_ * 2 + 0 ]
-      + node.B_.interpolation_coefficients[ node.B_.lag_ * 2 + 1 ] * t;
-    break;
-
-  case 3:
-    gap = -node.B_.sumj_g_ij_ * V + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 0 ]
-      + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 1 ] * t
-      + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 2 ] * t * t
-      + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 3 ] * t * t * t;
-    break;
-
-  default:
-    throw BadProperty( "Interpolation order must be 0, 1, or 3." );
-  }
-
-  const double_t I_gap = gap;
-
-  // V dot -- synaptic input are currents, inhib current is negative
-  f[ S::VM ] =
-    ( -( I_Na + I_K + I_L ) + node.B_.I_stim_ + node.P_.I_e + I_ex + I_in + I_gap ) / node.P_.C_m;
-
-  // channel dynamics
-  f[ S::HH_M ] = alpha_m * ( 1 - y[ S::HH_M ] ) - beta_m * y[ S::HH_M ]; // m-variable
-  f[ S::HH_H ] = alpha_h * ( 1 - y[ S::HH_H ] ) - beta_h * y[ S::HH_H ]; // h-variable
-  f[ S::HH_P ] = alpha_p * ( 1 - y[ S::HH_P ] ) - beta_p * y[ S::HH_P ]; // p-variable
-  f[ S::HH_N ] = alpha_n * ( 1 - y[ S::HH_N ] ) - beta_n * y[ S::HH_N ]; // n-variable
-
-  // synapses: alpha functions
-  f[ S::DI_EXC ] = -dI_ex / node.P_.tau_synE;
-  f[ S::I_EXC ] = dI_ex - ( I_ex / node.P_.tau_synE );
-  f[ S::DI_INH ] = -dI_in / node.P_.tau_synI;
-  f[ S::I_INH ] = dI_in - ( I_in / node.P_.tau_synI );
-*/
   return GSL_SUCCESS;
 }
-}
+
+} //nest namespace
+
 
 /* ----------------------------------------------------------------
  * Default constructors defining default parameters and state
  * ---------------------------------------------------------------- */
 
 nest::stbrst_gc_conv::Parameters_::Parameters_()
-    : El_( -65. ) // in mV
+	: VThC_ ( -60. ) //in mV
+    , El_( -65. ) // in mV
     , gl_( 1e3/180000000 ) // in mS
     , Cm_( 1.6E-4 ) // in uF
     , gnoise_( 2E-7 ) // in mS
     , tnoise_( 80. ) // in ms
+    , rnoise_( 1.4 ) // in 1/ms
     , gsyn_( 3.2e-4 ) // in mS
     , tsyn_( 200. ) // in ms
     , eCa_( 50. ) // in mV
@@ -185,11 +142,12 @@ nest::stbrst_gc_conv::Parameters_::Parameters_()
     , bSAHP_( 20. ) // in mc
     , gAHP_( 3e-5 ) // in mS // -(minus) !!!!
     , vHCa_( -20. ) // in mV
-    , vSCa_( 1. ) // in mV-1
+    , vSCa_( 10. ) // in mV-1
     , gCa_( 1e-5 ) // in mS // -!
 	, gainCAcon_ ( 1e2 ) // in ? / uA
 	, tCAcon_ ( 50. ) // in ms
 	, totAHPinit_ (0.5) // in ?
+	, seed_ (0) // in ?
 {
 }
 
@@ -202,6 +160,9 @@ nest::stbrst_gc_conv::State_::State_( const Parameters_& p)
     y_[ i ] = 0;
 
   y_[ FAHP ] = p.totAHPinit_;
+  //DB>>
+  //printf("\nRTH_DB: Set y_[FAHP]=%g\n",p.totAHPinit_);
+  //<<DB
 }
 
 nest::stbrst_gc_conv::State_::State_( const State_& s )
@@ -228,11 +189,13 @@ nest::stbrst_gc_conv::State_& nest::stbrst_gc_conv::State_::operator=( const Sta
 void
 nest::stbrst_gc_conv::Parameters_::get( DictionaryDatum& d ) const
 {
+	def< double >( d, "VThC", VThC_ );
 	def< double >( d, "El", El_ );
 	def< double >( d, "gl", gl_ );
 	def< double >( d, "Cm", Cm_ );
 	def< double >( d, "gnoise", gnoise_ );
 	def< double >( d, "tnoise", tnoise_ );
+	def< double >( d, "rnoise", rnoise_ );
 	def< double >( d, "gsyn", gsyn_ );
 	def< double >( d, "tsyn", tsyn_ );
 	def< double >( d, "eCa", eCa_ );
@@ -248,16 +211,19 @@ nest::stbrst_gc_conv::Parameters_::get( DictionaryDatum& d ) const
 	def< double >( d, "gainCAcon", gainCAcon_ );
 	def< double >( d, "tCAcon", tCAcon_ );
 	def< double >( d, "totAHPinit", totAHPinit_ );
+	def< long_t >( d, "seed", seed_ );
 }
 
 void
 nest::stbrst_gc_conv::Parameters_::set( const DictionaryDatum& d )
 {
+	 updateValue< double >( d, "VThC", VThC_ );
 	 updateValue< double >( d, "El", El_ );
 	 updateValue< double >( d, "gl", gl_ );
 	 updateValue< double >( d, "Cm", Cm_ );
 	 updateValue< double >( d, "gnoise", gnoise_ );
 	 updateValue< double >( d, "tnoise", tnoise_ );
+	 updateValue< double >( d, "rnoise", rnoise_ );
 	 updateValue< double >( d, "gsyn", gsyn_ );
 	 updateValue< double >( d, "tsyn", tsyn_ );
 	 updateValue< double >( d, "eCa", eCa_ );
@@ -273,6 +239,7 @@ nest::stbrst_gc_conv::Parameters_::set( const DictionaryDatum& d )
 	 updateValue< double >( d, "gainCAcon", gainCAcon_ );
 	 updateValue< double >( d, "tCAcon", tCAcon_ );
 	 updateValue< double >( d, "totAHPinit", totAHPinit_ );
+	 updateValue< long_t >( d, "seed", seed_ );
 	if ( Cm_ <= 0 )
 		throw BadProperty( "Capacitance must be strictly positive." );
 ////// TODO >> Check parameters range (rth)
@@ -318,6 +285,7 @@ nest::stbrst_gc_conv::Buffers_::Buffers_( stbrst_gc_conv& n )
   , s_( 0 )
   , c_( 0 )
   , e_( 0 )
+  , gslrnd( 0 )
 {
   // Initialization of the remaining members is deferred to
   // init_buffers_().
@@ -328,6 +296,7 @@ nest::stbrst_gc_conv::Buffers_::Buffers_( const Buffers_&, stbrst_gc_conv& n )
   , s_( 0 )
   , c_( 0 )
   , e_( 0 )
+  , gslrnd( 0 )
 {
   // Initialization of the remaining members is deferred to
   // init_buffers_().
@@ -343,7 +312,7 @@ nest::stbrst_gc_conv::stbrst_gc_conv()
   , S_( P_ )
   , B_( *this )
 {
-  Node::set_needs_prelim_update( true );
+//  Node::set_needs_prelim_update( true );
   recordablesMap_.create();
 }
 
@@ -364,6 +333,8 @@ nest::stbrst_gc_conv::~stbrst_gc_conv()
     gsl_odeiv_control_free( B_.c_ );
   if ( B_.e_ )
     gsl_odeiv_evolve_free( B_.e_ );
+  if ( B_.gslrnd )
+    gsl_rng_free( B_.gslrnd );
 }
 
 /* ----------------------------------------------------------------
@@ -380,27 +351,7 @@ nest::stbrst_gc_conv::init_state_( const Node& proto )
 void
 nest::stbrst_gc_conv::init_buffers_()
 {
-  B_.spike_exc_.clear(); // includes resize
-  B_.spike_inh_.clear(); // includes resize
-  B_.currents_.clear();  // includes resize
-
-  // allocate strucure for gap events here
-  // function is called from Scheduler::prepare_nodes() before the
-  // first call to update
-  // so we already know which interpolation scheme to use according
-  // to the properties of this neurons
-  // determine size of structure depending on interpolation scheme
-  // and unsigned int Scheduler::min_delay() (number of simulation time steps per min_delay step)
-
-  // resize interpolation_coefficients depending on interpolation order
-  const size_t quantity =
-    Scheduler::get_min_delay() * ( Scheduler::get_prelim_interpolation_order() + 1 );
-
-  B_.interpolation_coefficients.resize( quantity, 0.0 );
-
-  B_.last_y_values.resize( Scheduler::get_min_delay(), 0.0 );
-
-  B_.sumj_g_ij_ = 0.0;
+  B_.syn_convol_.clear(); // includes resize
 
   Archiving_Node::clear_history();
 
@@ -428,20 +379,19 @@ nest::stbrst_gc_conv::init_buffers_()
   B_.sys_.jacobian = NULL;
   B_.sys_.dimension = State_::STATE_VEC_SIZE;
   B_.sys_.params = reinterpret_cast< void* >( this );
-
-  B_.I_stim_ = 0.0;
+  /**
+   * Int random number generator
+   */
+  B_.gslrnd = gsl_rng_alloc( gsl_rng_default );
+  gsl_rng_set(B_.gslrnd, ( P_.seed_ ) ? P_.seed_ : get_thread() );
 }
 
 void
 nest::stbrst_gc_conv::calibrate()
 {
-/*  B_.logger_.init(); // ensures initialization in case mm connected after Simulate
-
-  V_.PSCurrInit_E_ = 1.0 * numerics::e / P_.tau_synE;
-  V_.PSCurrInit_I_ = 1.0 * numerics::e / P_.tau_synI;
-  V_.RefractoryCounts_ = Time( Time::ms( P_.t_ref_ ) ).get_steps();
-  assert( V_.RefractoryCounts_ >= 0 ); // since t_ref_ >= 0, this can only fail in error
-*/}
+  B_.logger_.init(); // ensures initialization in case mm connected after Simulate
+  S_.y_[ State_::FAHP ] = P_.totAHPinit_;
+}
 
 /* ----------------------------------------------------------------
  * Update and spike handling functions
@@ -456,145 +406,61 @@ nest::stbrst_gc_conv::update( Time const& origin,
   assert( to >= 0 && ( delay ) from < Scheduler::get_min_delay() );
   assert( from < to );
 
-  bool done = true;
- //// const size_t interpolation_order = Scheduler::get_prelim_interpolation_order();
-  ////const double_t prelim_tol = Scheduler::get_prelim_tol();
 
-  //// allocate memory to store the new interpolation coefficients
-  //// to be sent by gap event
-  //const size_t quantity = Scheduler::get_min_delay() * ( interpolation_order + 1 );
-  //std::vector< double_t > new_coefficients( quantity, 0.0 );
+  for ( long_t lag = from; lag < to; ++lag )
+  {
 
-  //// parameters needed for piecewise interpolation
-  //double_t y_i = 0.0, y_ip1 = 0.0, hf_i = 0.0, hf_ip1 = 0.0;
-  //double_t f_temp[ State_::STATE_VEC_SIZE ];
+    double tt = 0.0; // it's all relative!
+    const double V = S_.y_[ State_::VM ];
+    const double_t ca_act   = (0.5 * (1. + std::tanh((V - P_.vHCa_) / (2. * P_.vSCa_))));
 
-  //for ( long_t lag = from; lag < to; ++lag )
-  //{
+	// First, we accumulate all voltage event to avoid delay = min_delay + 1step 
+    S_.y_[ State_::SYNCONV ] += B_.syn_convol_.get_value( lag ) * P_.gsyn_;
+	
 
-    //// B_.lag is needed by stbrst_gc_conv_dynamics to
-    //// determine the current section
-    //B_.lag_ = lag;
+	// Original model has 
+	if (gsl_rng_uniform(B_.gslrnd) < (1. - std::exp(-P_.rnoise_ * ca_act * (1. - ca_act) * B_.step_)))
+        S_.y_[ State_::SPONT ] += P_.gnoise_ * (P_.eCa_ - V);
 
-
-    //double_t t = 0.0;
-    //const double_t U_old = S_.y_[ State_::VM ];
-
-    //// numerical integration with adaptive step size control:
-    //// ------------------------------------------------------
-    //// gsl_odeiv_evolve_apply performs only a single numerical
-    //// integration step, starting from t and bounded by step;
-    //// the while-loop ensures integration over the whole simulation
-    //// step (0, step] if more than one integration step is needed due
-    //// to a small integration step size;
-    //// note that (t+IntegrationStep > step) leads to integration over
-    //// (t, step] and afterwards setting t to step, but it does not
-    //// enforce setting IntegrationStep to step-t; this is of advantage
-    //// for a consistent and efficient integration across subsequent
-    //// simulation intervals
-    //while ( t < B_.step_ )
-    //{
-      //const int status = gsl_odeiv_evolve_apply( B_.e_,
-        //B_.c_,
-        //B_.s_,
-        //&B_.sys_,             // system of ODE
-        //&t,                   // from t
-        //B_.step_,             // to t <= step
-        //&B_.IntegrationStep_, // integration step size
-        //S_.y_ );              // neuronal state
-
-      //if ( status != GSL_SUCCESS )
-        //throw GSLSolverFailure( get_name(), status );
-    //}
-
-    //if ( !prelim ){ // main update
-      ////S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value( lag ) * V_.PSCurrInit_E_;
-      ////S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value( lag ) * V_.PSCurrInit_I_;
-      //// sending spikes: crossing 0 mV, pseudo-refractoriness and local maximum...
-      //// refractory?
-      //if ( S_.r_ > 0 )
-        //--S_.r_;
-      //else
-        //// (    threshold    &&     maximum       )
-        //if ( S_.y_[ State_::VM ] >= 0 && U_old > S_.y_[ State_::VM ] )
-      //{
-        //S_.r_ = V_.RefractoryCounts_;
-
-        //set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
-
-        //SpikeEvent se;
-        //network()->send( *this, se, lag );
-      //}
-
-      //// log state data
-      //B_.logger_.record_data( origin.get_steps() + lag );
-
-      //// set new input current
-      //B_.I_stim_ = B_.currents_.get_value( lag );
-    //}
-    //else // if(prelim)
-    //{
-      ////S_.y_[ State_::DI_EXC ] += B_.spike_exc_.get_value_prelim( lag ) * V_.PSCurrInit_E_;
-      ////S_.y_[ State_::DI_INH ] += B_.spike_inh_.get_value_prelim( lag ) * V_.PSCurrInit_I_;
-      //// check deviation from last iteration
-      //done = ( fabs( S_.y_[ State_::VM ] - B_.last_y_values[ lag ] ) <= prelim_tol ) && done;
-      //B_.last_y_values[ lag ] = S_.y_[ State_::VM ];
-
-      //// update different interpolations
-
-      //// constant term is the same for each interpolation order
-      //new_coefficients[ lag * ( interpolation_order + 1 ) + 0 ] = y_i;
-
-      //switch ( interpolation_order )
-      //{
-      //case 0:
-        //break;
-
-      //case 1:
-        //y_ip1 = S_.y_[ State_::VM ];
-
-        //new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = y_ip1 - y_i;
-        //break;
-
-      //case 3:
-        //y_ip1 = S_.y_[ State_::VM ];
-        //stbrst_gc_conv_dynamics( B_.step_, S_.y_, f_temp, reinterpret_cast< void* >( this ) );
-        //hf_ip1 = B_.step_ * f_temp[ State_::VM ];
-
-        //new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = hf_i;
-        //new_coefficients[ lag * ( interpolation_order + 1 ) + 2 ] =
-          //-3 * y_i + 3 * y_ip1 - 2 * hf_i - hf_ip1;
-        //new_coefficients[ lag * ( interpolation_order + 1 ) + 3 ] =
-          //2 * y_i - 2 * y_ip1 + hf_i + hf_ip1;
-        //break;
-
-      //default:
-        //throw BadProperty( "Interpolation order must be 0, 1, or 3." );
-      //}
-    //}
+    // adaptive step integration
+    while ( tt < B_.step_ )
+    {
+      const int status = gsl_odeiv_evolve_apply( B_.e_,
+        B_.c_,
+        B_.s_,
+        &B_.sys_,             // system of ODE
+        &tt,                  // from t...
+        B_.step_,             // ...to t=t+h
+        &B_.IntegrationStep_, // integration window (written on!)
+        S_.y_ );              // neuron state
 
 
-  //} // end for-loop
+      if ( status != GSL_SUCCESS )
+        throw GSLSolverFailure( get_name(), status );
+    }
 
-  //// if !prelim perform constant extrapolation and reset last_y_values
-  //if ( !prelim ) //main update
-  //{
-    //for ( long_t temp = from; temp < to; ++temp )
-      //new_coefficients[ temp * ( interpolation_order + 1 ) + 0 ] = S_.y_[ State_::VM ];
+    
+	// GC spike
+	if ( S_.y_[ State_::VM ] >= P_.VThC_ && V < S_.y_[ State_::VM ] ) {
+		set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
 
-    //B_.last_y_values.clear();
-    //B_.last_y_values.resize( Scheduler::get_min_delay(), 0.0 );
-  //}
+		SpikeEvent se;
+		network()->send( *this, se, lag );
+	}
+    
+	if ( S_.y_[ State_::VM ] >= P_.VThC_ ){
+		//S_.r_ = V_.RefractoryCounts_;
 
-  //// Send gap-event
-  ////ConvolvEvent ge;
-  ////ge.set_coeffarray( new_coefficients );
-  ////network()->send_secondary( *this, ge );
+		//set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
 
-  //// Reset variables
-  //B_.sumj_g_ij_ = 0.0;
-  //B_.interpolation_coefficients.clear();
-  //B_.interpolation_coefficients.resize( quantity, 0.0 );
+		ConvolvEvent se;
+		se.set_voltage(S_.y_[ State_::VM ] - P_.VThC_);
+		network()->send( *this, se, lag );
+	}
+
+    // log state data
+    B_.logger_.record_data( origin.get_steps() + lag );
+  }
 
   return;
 }
@@ -602,27 +468,8 @@ nest::stbrst_gc_conv::update( Time const& origin,
 void
 nest::stbrst_gc_conv::handle( SpikeEvent& e )
 {
-  assert( e.get_delay() > 0 );
-
-  if ( e.get_weight() > 0.0 )
-    B_.spike_exc_.add_value( e.get_rel_delivery_steps( network()->get_slice_origin() ),
-      e.get_weight() * e.get_multiplicity() );
-  else
-    B_.spike_inh_.add_value( e.get_rel_delivery_steps( network()->get_slice_origin() ),
-      e.get_weight() * e.get_multiplicity() ); // current input, keep negative weight
 }
 
-void
-nest::stbrst_gc_conv::handle( CurrentEvent& e )
-{
-  assert( e.get_delay() > 0 );
-
-  const double_t c = e.get_current();
-  const double_t w = e.get_weight();
-
-  // add weighted current; HEP 2002-10-04
-  B_.currents_.add_value( e.get_rel_delivery_steps( network()->get_slice_origin() ), w * c );
-}
 
 void
 nest::stbrst_gc_conv::handle( DataLoggingRequest& e )
@@ -633,17 +480,10 @@ nest::stbrst_gc_conv::handle( DataLoggingRequest& e )
 void
 nest::stbrst_gc_conv::handle( ConvolvEvent& e )
 {
-/*
-  B_.sumj_g_ij_ += e.get_weight();
-
-  size_t i = 0;
-  std::vector< uint_t >::iterator it = e.begin();
-  // The call to get_coeffvalue( it ) in this loop also advances the iterator it
-  while ( it != e.end() )
-  {
-    B_.interpolation_coefficients[ i++ ] += e.get_weight() * e.get_coeffvalue( it );
-  }
-*/
+//  assert( e.get_delay() > 0 );
+//  const double_t v = e.get_voltage();
+//  const double_t w = e.get_weight();
+//  B_.syn_convol_.add_value( e.get_rel_delivery_steps( network()->get_slice_origin() ), w * v );
 }
 
 #endif // HAVE_GSL

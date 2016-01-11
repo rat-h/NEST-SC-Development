@@ -46,6 +46,7 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv.h>
 #include <gsl/gsl_sf_exp.h>
+#include <gsl/gsl_rng.h>
 
 #include "convolution.h"
 namespace nest
@@ -97,7 +98,7 @@ Parameters:
  VmThC		double - Thresholded Membrane positional for Convolution connections
                    - VmThC is Vm - VThC if Vm > VThC and the zero otherwise
  =========    PARAMETERS   =========
- VThC		double - Threshold Voltage Cholinergic activation
+ VThC		double - Threshold Voltage of Cholinergic activation
  
  El         double - Resting membrane potential in mV.
  gl         double - Leak conductance in mS.
@@ -106,6 +107,7 @@ Parameters:
  
  gnoise     double - Conductance of spontaneous event in mS
  tnoise     double - Time constant of spontaneous integration in ms
+ rnoise     double - Spike rate constant for spontaneous event in 1/ms
  
  gsyn       double - Maximal conductance of synapses event in mS
  tsyn       double - Time constant of synaptic integration in ms
@@ -129,6 +131,7 @@ Parameters:
                      * In original model fAHP initiates from uniform random
                      *  distribution in range (0, 1). Set this parameter
                      *  individually for each neuron.
+ seed       long   - * Seed of independent random number generator.
  
 References: 
  Hennig, MH, Adams, C., Willshaw, D. and Sernagor, E. (2009).
@@ -165,7 +168,6 @@ public:
 
 
   void handle( SpikeEvent& );
-  void handle( CurrentEvent& );
   void handle( DataLoggingRequest& );
   void handle( ConvolvEvent& );
   inline void event_hook( DSConvolvEvent& e )
@@ -176,34 +178,8 @@ public:
 
 
   port handles_test_event( SpikeEvent&, rport );
-  port handles_test_event( CurrentEvent&, rport );
   port handles_test_event( DataLoggingRequest&, rport );
   port handles_test_event( ConvolvEvent&, rport );
-
-  //void
-  //sends_secondary_event( ConvolvEvent& )
-  //{
-  //}
-
-  /**
-   * Return membrane potential at time t.
-potentials_.connect_logging_device();
-   * This function is not thread-safe and should not be used in threaded
-   * contexts to access the current membrane potential values.
-   * @param Time the current network time
-   *
-   */
-  double_t get_potential( Time const& ) const;
-
-  /**
-   * Define current membrane potential.
-   * This function is thread-safe and should be used in threaded
-   * contexts to change the current membrane potential value.
-   * @param Time     the current network time
-   * @param double_t new value of the mebrane potential
-   *
-   */
-  void set_potential( Time const&, double_t );
 
   void get_status( DictionaryDatum& ) const;
   void set_status( const DictionaryDatum& );
@@ -232,11 +208,13 @@ private:
   struct Parameters_
   {
 	//See documentation above :)
+	double_t VThC_;
     double_t El_ ;
     double_t gl_ ;
     double_t Cm_ ;
     double_t gnoise_ ;
     double_t tnoise_ ;
+    double_t rnoise_ ;
     double_t gsyn_ ;
     double_t tsyn_ ;
     double_t eCa_ ;
@@ -252,6 +230,9 @@ private:
 	double_t gainCAcon_ ;
 	double_t tCAcon_ ;
 	double_t totAHPinit_;
+	long_t   seed_;
+	
+	//double_t 
 
     Parameters_(); //!< Sets default parameter values
 
@@ -297,6 +278,7 @@ public:
 
     void get( DictionaryDatum& ) const;
     void set( const DictionaryDatum& );
+
   };
 
   // ----------------------------------------------------------------
@@ -314,9 +296,7 @@ private:
     UniversalDataLogger< stbrst_gc_conv > logger_;
 
     /** buffers and sums up incoming spikes/currents */
-    RingBuffer spike_exc_;
-    RingBuffer spike_inh_;
-    RingBuffer currents_;
+    RingBuffer syn_convol_;
 
     /** GSL ODE stuff */
     gsl_odeiv_step* s_;    //!< stepping function
@@ -324,30 +304,19 @@ private:
     gsl_odeiv_evolve* e_;  //!< evolution function
     gsl_odeiv_system sys_; //!< struct describing system
 
-    // IntergrationStep_ should be reset with the neuron on ResetNetwork,
-    // but remain unchanged during calibration. Since it is initialized with
-    // step_, and the resolution cannot change after nodes have been created,
-    // it is safe to place both here.
     double_t step_;          //!< step size in ms
     double IntegrationStep_; //!< current integration time step, updated by GSL
-
-    // remembers current lag for piecewise interpolation
-    long_t lag_;
-    // remembers y_values from last prelim_update
-    std::vector< double_t > last_y_values;
-    // summarized gap weight
-    double_t sumj_g_ij_;
-    // summarized coefficients of the interpolation polynomial
-    std::vector< double_t > interpolation_coefficients;
-
-    /**
-     * Input current injected by CurrentEvent.
-     * This variable is used to transport the current applied into the
-     * _dynamics function computing the derivative of the state vector.
-     * It must be a part of Buffers_, since it is initialized once before
-     * the first simulation, but not modified before later Simulate calls.
+    
+    /** 
+     * Independent random GSL generator for every nodes
+     * We need it, because Original model has voltage(Ca++) dependent
+     * spontaneous event rate. Therefore it isn't possible use
+     * External Poisson generator. We cannot control alpha of
+     * External Poisson generator during the simulation.
+     * Probably there is a better way to do this, but I've gave up
+     * for now ._. (RTH)
      */
-    double_t I_stim_;
+     gsl_rng* gslrnd;
   };
 
   // ----------------------------------------------------------------
@@ -357,13 +326,13 @@ private:
    */
   struct Variables_
   {
-    /** initial value to normalise excitatory synaptic current */
-    double_t PSCurrInit_E_;
+    /** Calcium steady-state activation */
+    double_t Ica_ss;
 
-    /** initial value to normalise inhibitory synaptic current */
-    double_t PSCurrInit_I_;
+    ///** initial value to normalise inhibitory synaptic current */
+    //double_t PSCurrInit_I_;
 
-    int_t RefractoryCounts_;
+    //int_t RefractoryCounts_;
   };
 
   // Access functions for UniversalDataLogger -------------------------------
@@ -387,42 +356,24 @@ private:
   static RecordablesMap< stbrst_gc_conv > recordablesMap_;
 };
 
-//inline void
-//stbrst_gc_conv::update( Time const& origin, const long_t from, const long_t to )
-//{
-  //update_( origin, from, to, false );
-//}
-
-//inline bool
-//stbrst_gc_conv::prelim_update( Time const& origin, const long_t from, const long_t to )
-//{
-  //bool done = false;
-  //State_ old_state = S_; // save state before prelim update
-  //done = update_( origin, from, to, true );
-  //S_ = old_state; // restore old state
-
-  //return done;
-//}
 
 inline port
-stbrst_gc_conv::send_test_event( Node& target, rport receptor_type, synindex, bool )
+stbrst_gc_conv::send_test_event( Node& target, rport receptor_type, synindex, bool dummy)
 {
-  SpikeEvent se;
-  se.set_sender( *this );
-  return target.handles_test_event( se, receptor_type );
+	if (dummy) {
+	  ConvolvEvent se;
+	  se.set_sender( *this );
+	  return ( (stbrst_gc_conv&)target).handles_test_event( se, receptor_type );
+	} else {
+	  SpikeEvent se;
+	  se.set_sender( *this );
+	  return target.handles_test_event( se, receptor_type );
+	}
 }
 
 
 inline port
 stbrst_gc_conv::handles_test_event( SpikeEvent&, rport receptor_type )
-{
-  if ( receptor_type != 0 )
-    throw UnknownReceptorType( receptor_type, get_name() );
-  return 0;
-}
-
-inline port
-stbrst_gc_conv::handles_test_event( CurrentEvent&, rport receptor_type )
 {
   if ( receptor_type != 0 )
     throw UnknownReceptorType( receptor_type, get_name() );
