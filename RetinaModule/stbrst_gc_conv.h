@@ -141,7 +141,7 @@ References:
 
 Sends: ConvolvEvent
 
-Receives: SpikeEvent, ConvolvEvent, CurrentEvent, DataLoggingRequest
+Receives: SpikeEvent, ConvolvEvent, ConvolvEvent, DataLoggingRequest
 
 Author: Ruben Tikidji-Hamburyan
 */
@@ -161,6 +161,8 @@ public:
    * Import sets of overloaded virtual functions.
    * @see Technical Issues / Virtual Functions: Overriding, Overloading, and Hiding
    */
+  bool has_proxies()    const { return false; }
+  bool local_receiver() const { return true;  }
   using Node::handle;
   using Node::handles_test_event;
 

@@ -441,14 +441,14 @@ nest::stbrst_gc_conv::update( Time const& origin,
 
     
 	// GC spike
-	if ( S_.y_[ State_::VM ] >= P_.VThC_ && V < S_.y_[ State_::VM ] ) {
+	if ( S_.y_[ State_::VM ] >= P_.VThC_ && V < P_.VThC_ ) {
 		set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
 
 		SpikeEvent se;
 		network()->send( *this, se, lag );
 	}
     
-	if ( S_.y_[ State_::VM ] >= P_.VThC_ ){
+	if ( S_.y_[ State_::VM ] > P_.VThC_ ){
 		//S_.r_ = V_.RefractoryCounts_;
 
 		//set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
@@ -480,10 +480,10 @@ nest::stbrst_gc_conv::handle( DataLoggingRequest& e )
 void
 nest::stbrst_gc_conv::handle( ConvolvEvent& e )
 {
-//  assert( e.get_delay() > 0 );
-//  const double_t v = e.get_voltage();
-//  const double_t w = e.get_weight();
-//  B_.syn_convol_.add_value( e.get_rel_delivery_steps( network()->get_slice_origin() ), w * v );
+  assert( e.get_delay() > 0 );
+  const double_t v = e.get_voltage();
+  const double_t w = e.get_weight();
+  B_.syn_convol_.add_value( e.get_rel_delivery_steps( network()->get_slice_origin() ), w * v );
 }
 
 #endif // HAVE_GSL
