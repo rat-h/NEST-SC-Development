@@ -12,12 +12,12 @@ params = [
 	'totAHPinit':i,
 	'seed':s,
 	'gnoise':gnoise,
-	} for i,s,gnoise in zip(rnd.random(2),rnd.randint(32535,size=2),[2E-7,0.]) 
+	} for i,s,gnoise in zip(0.2*rnd.random(2),rnd.randint(32535,size=2),[2E-7,0.]) 
 ]
 
 nest.SetStatus(neurons,params )
 
-res=["Vm","synconv","spont","conCa","fAHP","sAHP", "ICa", "IAHP","ISyn"]
+res=["Vm","synconv","spont","conCa","fAHP","sAHP"]#DB>>, "ICa", "IAHP","ISyn"]
 multimeter = nest.Create("multimeter")
 nest.SetStatus(multimeter, {"withtime":True, "record_from":res})
 nest.Connect(multimeter,neurons)
@@ -25,7 +25,8 @@ nest.Connect(multimeter,neurons)
 #sd = nest.Create("spike_detector")
 #nest.Connect(neurons,sd)
 
-nest.Connect((neurons[0],),(neurons[1],),syn_spec={"weight": 0.24, "delay":2., 'model':"Convolution"})
+#nest.Connect((neurons[0],),(neurons[1],),syn_spec={"weight": 0.24, "delay":2., 'model':"Convolution"})
+nest.Connect((neurons[0],),(neurons[1],),syn_spec={"weight": 1., "delay":2., 'model':"Convolution"})
 
 
 nest.Simulate(2000.0)
