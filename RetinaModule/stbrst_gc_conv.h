@@ -186,6 +186,7 @@ public:
   void get_status( DictionaryDatum& ) const;
   void set_status( const DictionaryDatum& );
 
+ 
 private:
   void init_state_( const Node& proto );
   void init_buffers_();
@@ -273,6 +274,7 @@ public:
 
     double_t y_[ STATE_VEC_SIZE ]; //!< neuron state, must be C-array for GSL solver
     int_t r_;                      //!< number of refractory steps remaining
+    double_t ICa, IAHP;
 
     State_( const Parameters_& ); //!< Default initialization
     State_( const State_& );
@@ -329,7 +331,7 @@ private:
   struct Variables_
   {
     /** Calcium steady-state activation */
-    double_t Ica_ss;
+	 double ICa, IAHP, ISyn;
 
     ///** initial value to normalise inhibitory synaptic current */
     //double_t PSCurrInit_I_;
@@ -346,6 +348,11 @@ private:
   {
     return S_.y_[ elem ];
   }
+  
+  
+  double_t get_ICa_() const { return V_.ICa; }
+  double_t get_IAHP_() const { return V_.IAHP; }
+  double_t get_ISyn_() const { return V_.ISyn; }
 
   // ----------------------------------------------------------------
 

@@ -202,8 +202,10 @@ mynest::RetinaModule::init( SLIInterpreter* i )
    * I use Gap-Junction Module and GapJunctionEvent to convey voltage of 
    * neighbor Amacrine cells
    */
-  nest::register_secondary_connection_model< nest::Convolv< nest::TargetIdentifierPtrRport > >(
-    nest::NestModule::get_network(), "Convolution", false );
+//  nest::register_secondary_connection_model< nest::Convolv< nest::TargetIdentifierPtrRport > >(
+//    nest::NestModule::get_network(), "Convolution", false );
+  nest::register_connection_model< nest::Convolv< nest::TargetIdentifierPtrRport > >(
+    nest::NestModule::get_network(), "Convolution" );
 
 // === It seems, we don't need SLI function. (rth) ===
   /* Register a SLI function.

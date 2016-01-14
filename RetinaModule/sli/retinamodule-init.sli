@@ -34,7 +34,7 @@
 
 M_DEBUG (retinamodule.sli) (Initializing SLI support for Retina Module.) message
 
-// ==== We are going to use python functions to create network. Therefore we don't need SLI procs. (rth) ====
+/* ==== We are going to use python functions to create network. Therefore we don't need SLI procs. (rth) ==== */
 /*
 /StepPatternConnect [ /arraytype /integertype /arraytype /integertype /literaltype ]
 {

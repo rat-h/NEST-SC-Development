@@ -42,6 +42,7 @@
 #include <nest_names.h>
 #include "convolution.h"
 
+double ICa,IAHP, ISyn;
 nest::RecordablesMap< nest::stbrst_gc_conv > nest::stbrst_gc_conv::recordablesMap_;
 namespace nest
 {
@@ -71,6 +72,9 @@ RecordablesMap< stbrst_gc_conv >::create()
   insert_( "sAHP", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SAHP > );
   insert_( "spont", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SPONT > );
   insert_( "synconv", &stbrst_gc_conv::get_y_elem_< stbrst_gc_conv::State_::SYNCONV > );
+  insert_( "ICa", &stbrst_gc_conv::get_ICa_ );
+  insert_( "IAHP", &stbrst_gc_conv::get_IAHP_ );
+  insert_( "ISyn", &stbrst_gc_conv::get_ISyn_ );
 }
 
 extern "C" int
@@ -101,16 +105,22 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
   const double_t& synconv = y[ S::SYNCONV ];
   
   const double_t ca_act   = (0.5 * (1. + std::tanh((V - P.vHCa_) / (2. * P.vSCa_))));
-  const double_t ICa      = ca_act * P.gCa_ * (P.eCa_ - V);
   const double_t dc       = fAHP*fAHP*fAHP*fAHP;
-  const double_t IsAHP    = P.gAHP_ * dc * (P.eK_ - V);
   const double_t conCa4   = conCa * conCa * conCa * conCa;
+
+  //const double_t ICa      =  ca_act * P.gCa_ * (P.eCa_ - V) ;
+  //const double_t IAHP     = P.gAHP_ * dc * (P.eK_ - V) ;
+   ICa      = P.gCa_  * ca_act  * (P.eCa_ - V) ;
+   IAHP     = P.gAHP_ *   dc    * (P.eK_  - V) ;
+   ISyn     = - synconv * V;
+
+
   f[S::VM     ] = 
-      (IsAHP + ICa + spont - synconv * V + P.gl_ * (P.El_ - V) ) / P.Cm_;
-  f[S::CON_CA ] = P.gainCAcon_* ICa - conCa / P.tCAcon_;
-  f[S::SPONT  ] = - spont / P.tnoise_;
-  f[S::FAHP   ] = (P.aFAHP_ * conCa + sAHP) * (1. - fAHP) - fAHP * P.bFAHP_;
-  f[S::SAHP   ] = P.aSAHP_ * conCa4/(2e-10 + conCa4) * (1. - sAHP) - sAHP * P.bSAHP_;
+      ( IAHP + ICa + spont - synconv * V + P.gl_ * (P.El_ - V) ) / P.Cm_;
+  f[S::CON_CA ] = P.gainCAcon_ * ICa - conCa / P.tCAcon_;
+  f[S::FAHP   ] = ( P.aFAHP_ * conCa  +  1e-3 * sAHP ) * (1. - fAHP) - fAHP * P.bFAHP_;
+  f[S::SAHP   ] =   P.aSAHP_ * conCa4/(2e-10 + conCa4) * (1. - sAHP) - sAHP * P.bSAHP_ ;
+  f[S::SPONT  ] = - spont   / P.tnoise_;
   f[S::SYNCONV] = - synconv / P.tsyn_;
 
 
@@ -127,24 +137,24 @@ stbrst_gc_conv_dynamics( double time, const double y[], double f[], void* pnode 
 nest::stbrst_gc_conv::Parameters_::Parameters_()
 	: VThC_ ( -60. ) //in mV
     , El_( -65. ) // in mV
-    , gl_( 1e3/180000000 ) // in mS
+    , gl_( 1e3/1.8e8 ) // in mS
     , Cm_( 1.6E-4 ) // in uF
     , gnoise_( 2E-7 ) // in mS
     , tnoise_( 80. ) // in ms
     , rnoise_( 1.4 ) // in 1/ms
-    , gsyn_( 3.2e-4 ) // in mS
+    , gsyn_( 3.2e-10 ) // in mS / ms / mV
     , tsyn_( 200. ) // in ms
     , eCa_( 50. ) // in mV
     , eK_( -90. ) // in mV
-    , aFAHP_( 2400. ) // in ?
-    , bFAHP_( 200. ) // in mc
-    , aSAHP_( 30. ) // in ?
-    , bSAHP_( 20. ) // in mc
+    , aFAHP_( 2400e-3 ) // in ?-1 mc-1
+    , bFAHP_( 0.2e-3 ) // in mc-1	
+    , aSAHP_( 30.e-3 ) // in ?-1 mc-1
+    , bSAHP_( 0.02e-3 ) // in mc-1
     , gAHP_( 3e-5 ) // in mS // -(minus) !!!!
-    , vHCa_( -20. ) // in mV
+    , vHCa_( -15. ) // in mV
     , vSCa_( 10. ) // in mV-1
     , gCa_( 1e-5 ) // in mS // -!
-	, gainCAcon_ ( 1e2 ) // in ? / uA
+	, gainCAcon_ ( 1e-1 ) // in ? / uA
 	, tCAcon_ ( 50. ) // in ms
 	, totAHPinit_ (0.5) // in ?
 	, seed_ (0) // in ?
@@ -160,9 +170,6 @@ nest::stbrst_gc_conv::State_::State_( const Parameters_& p)
     y_[ i ] = 0;
 
   y_[ FAHP ] = p.totAHPinit_;
-  //DB>>
-  //printf("\nRTH_DB: Set y_[FAHP]=%g\n",p.totAHPinit_);
-  //<<DB
 }
 
 nest::stbrst_gc_conv::State_::State_( const State_& s )
@@ -390,7 +397,10 @@ void
 nest::stbrst_gc_conv::calibrate()
 {
   B_.logger_.init(); // ensures initialization in case mm connected after Simulate
-  S_.y_[ State_::FAHP ] = P_.totAHPinit_;
+  //S_.y_[ State_::FAHP ] = P_.totAHPinit_;
+  //DB>>
+ S_.y_[ State_::FAHP ] = 0.1;//gsl_rng_uniform(B_.gslrnd);
+  //<<DB
 }
 
 /* ----------------------------------------------------------------
@@ -412,15 +422,24 @@ nest::stbrst_gc_conv::update( Time const& origin,
 
     double tt = 0.0; // it's all relative!
     const double V = S_.y_[ State_::VM ];
-    const double_t ca_act   = (0.5 * (1. + std::tanh((V - P_.vHCa_) / (2. * P_.vSCa_))));
+    const double ca_act   = (0.5 * (1. + std::tanh((V - P_.vHCa_) / (2. * P_.vSCa_))));
 
 	// First, we accumulate all voltage event to avoid delay = min_delay + 1step 
-    S_.y_[ State_::SYNCONV ] += B_.syn_convol_.get_value( lag ) * P_.gsyn_;
+	//DB>>
+	//const double synsum = B_.syn_convol_.get_value( lag );
+	//if( synsum > 0.){
+		
+		//printf("RTH-DB: LAG = %g ; B_.syn_convol_.get_value( lag ) * P_.gsyn_ = %g ; S_.y_[ State_::SYNCONV ] = %g\n",origin.get_ms(),synsum * P_.gsyn_,S_.y_[ State_::SYNCONV ]);
+	//}
+	//S_.y_[ State_::SYNCONV ] += B_.step_ * synsum * P_.gsyn_;
+	//<<DB
+    S_.y_[ State_::SYNCONV ] += B_.step_ * B_.syn_convol_.get_value( lag ) * P_.gsyn_;
 	
 
 	// Original model has 
-	if (gsl_rng_uniform(B_.gslrnd) < (1. - std::exp(-P_.rnoise_ * ca_act * (1. - ca_act) * B_.step_)))
+	if (gsl_rng_uniform(B_.gslrnd) < (1. - std::exp(-P_.rnoise_ * ca_act * (1. - ca_act) * B_.step_)) )
         S_.y_[ State_::SPONT ] += P_.gnoise_ * (P_.eCa_ - V);
+   
 
     // adaptive step integration
     while ( tt < B_.step_ )
@@ -439,16 +458,54 @@ nest::stbrst_gc_conv::update( Time const& origin,
         throw GSLSolverFailure( get_name(), status );
     }
 
-    
-	// GC spike
-	if ( S_.y_[ State_::VM ] >= P_.VThC_ && V < P_.VThC_ ) {
-		set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
+	V_.ICa      = ICa ;
+    V_.IAHP     = IAHP;
+    V_.ISyn     = ISyn;
 
-		SpikeEvent se;
-		network()->send( *this, se, lag );
-	}
+	// Euler Method as in original work
+/*
+	const double_t& conCa   = S_.y_[ State_::CON_CA ];
+	const double_t& fAHP    = S_.y_[ State_::FAHP ];
+	const double_t& sAHP    = S_.y_[ State_::SAHP ];
+	const double_t& spont   = S_.y_[ State_::SPONT ];
+	const double_t& synconv = S_.y_[ State_::SYNCONV ];
+
+	const double_t dc       = fAHP*fAHP*fAHP*fAHP;
+	const double_t conCa4   = conCa * conCa * conCa * conCa;
+
+	V_.ICa      = P_.gCa_  * ca_act  * (P_.eCa_ - V) ;
+	V_.IAHP     = P_.gAHP_ *   dc    * (P_.eK_  - V) ;
+	V_.ISyn     = synconv * (0. - V);
+
+
+	S_.y_[ State_::VM ]     += B_.step_ *
+	  ( ( V_.IAHP + V_.ICa + spont + V_.ISyn + P_.gl_ * (P_.El_ - V) ) / P_.Cm_ );
+
+	S_.y_[ State_::FAHP   ] += B_.step_ *  
+	  ( ( P_.aFAHP_ * conCa  +  1e-3 * sAHP ) * (1. - fAHP) - fAHP * P_.bFAHP_ );
+
+	S_.y_[ State_::SAHP   ] += B_.step_ *
+	  (   P_.aSAHP_ * conCa4/(2e-10 + conCa4) * (1. - sAHP) - sAHP * P_.bSAHP_ );
+
+	S_.y_[ State_::SPONT  ] += B_.step_ * 
+	  ( - spont   / P_.tnoise_ );
+
+	S_.y_[ State_::SYNCONV] += B_.step_ * 
+	  ( - synconv / P_.tsyn_ );
+
+	S_.y_[ State_::CON_CA ] += B_.step_ *
+	  ( P_.gainCAcon_ * V_.ICa - conCa / P_.tCAcon_ );
+*/
+
+	// GC spike
+	//if ( S_.y_[ State_::VM ] >= P_.VThC_ && V < P_.VThC_ ) {
+		//set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
+
+		//SpikeEvent se;
+		//network()->send( *this, se, lag );
+	//}
     
-	if ( S_.y_[ State_::VM ] > P_.VThC_ ){
+	if ( ( S_.y_[ State_::VM ] - P_.VThC_ ) >0. ){
 		//S_.r_ = V_.RefractoryCounts_;
 
 		//set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );
@@ -483,6 +540,10 @@ nest::stbrst_gc_conv::handle( ConvolvEvent& e )
   assert( e.get_delay() > 0 );
   const double_t v = e.get_voltage();
   const double_t w = e.get_weight();
+	//DB>>
+	//printf("RTH-DB: Receive(w=%g, v=%g\n",w,v);
+	//<<DB
+
   B_.syn_convol_.add_value( e.get_rel_delivery_steps( network()->get_slice_origin() ), w * v );
 }
 

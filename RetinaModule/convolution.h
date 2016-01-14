@@ -187,9 +187,12 @@ public:
   send( Event& e, thread t, double_t, const CommonSynapseProperties& )
   {
     e.set_weight( weight_ );
-    e.set_delay( ConnectionBase::get_delay_steps() );
-    e.set_receiver( *ConnectionBase::get_target( t ) );
-    e.set_rport( ConnectionBase::get_rport() );
+    //e.set_delay( ConnectionBase::get_delay_steps() );
+    //e.set_receiver( *ConnectionBase::get_target( t ) );
+    //e.set_rport( ConnectionBase::get_rport() );
+    e.set_delay( get_delay_steps() );
+    e.set_receiver( *get_target( t ) );
+    e.set_rport( get_rport() );
     e();
   }
 
