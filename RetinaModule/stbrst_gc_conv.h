@@ -129,10 +129,10 @@ Parameters:
 						 * In original model fAHP initiates from uniform random
 						 *	distribution in range (0, 1). Set this parameter
 						 *	individually for each neuron.
- seed			long	- * Seed of independent random number generator.
+ seed			long   - * Seed of independent random number generator.
 						 * Set this parameter individually for each neuron.
- gslON_eulerOFF	bool   - * If true - gsl rk45 method to solve differential
-						 * equations is used. Direct Euler method similar
+ gslON_eulerOFF	bool   - * If true - gsl rk45 method is used to solve
+						 * differential equations. Direct Euler method similar
 						 * to original paper is used otherwise.
  
 References: 

@@ -1,3 +1,19 @@
+"""
+/**
+ *  stbrst-test.py
+ *
+ *
+ *  This file is test suite for the retinal module of a model to 
+ *  study development cortical inputs alignment in SC.
+ * 
+ *  Retinal module provides Starburst Amacrine cell model and
+ *  Cholinergic connections modeled by convolution of voltage neighbor cells
+ *
+ *  Copyright (C) Ruben Tikidji-Hamburyan (rath@gwu.edu)
+ *
+ */
+"""
+
 import numpy as np
 import numpy.random as rnd
 import nest
